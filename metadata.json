@@ -1,0 +1,9 @@
+{
+  "name": "ExploreMate",
+  "description": "A high-fidelity, animated login experience using React, Tailwind CSS, and GSAP.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}
