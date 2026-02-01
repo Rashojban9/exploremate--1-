@@ -152,7 +152,7 @@ export default function App() {
   useEffect(() => {
     const handleUrlGate = () => {
       // Access via secret path or manual hash
-      if (window.location.pathname === '/master-control' || window.location.hash === '#admin') {
+      if (window.location.pathname === '/master-control' || window.location.pathname === '/admin' || window.location.hash === '#admin') {
          setView('admin');
       }
     };
