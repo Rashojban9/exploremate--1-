@@ -3,7 +3,7 @@ import { gsap } from 'gsap';
 import { ArrowRight, ArrowLeft, User, Mail, ShieldCheck, Check, Globe, Smartphone, Sparkles } from 'lucide-react';
 import { InputField } from '../components/SharedUI';
 import { SIGNUP_IMAGES } from '../assets/images';
-import { registerUser, type AuthResponse } from '../services/api';
+import { register as registerUser, type AuthResponse } from '../services/authService';
 
 const SIGNUP_STEPS = [
   { id: 1, title: 'Create Your Account', desc: 'Set up your profile to personalize your trips.', image: SIGNUP_IMAGES.BHAKTAPUR },
@@ -133,9 +133,8 @@ const SignupPage = ({ onSignup, onNavigate }: { onSignup: (auth: AuthResponse) =
                           key={lvl}
                           type="button"
                           onClick={() => setSelectedModes((prev) => (selected ? prev.filter((item) => item !== lvl) : [...prev, lvl]))}
-                          className={`p-5 rounded-2xl border-2 text-sm font-bold transition-all text-center flex flex-col items-center gap-2 group ${
-                            selected ? 'border-sky-500 text-sky-600 bg-sky-50' : 'border-slate-100 text-slate-600 hover:border-sky-500 hover:text-sky-600 hover:bg-sky-50'
-                          }`}
+                          className={`p-5 rounded-2xl border-2 text-sm font-bold transition-all text-center flex flex-col items-center gap-2 group ${selected ? 'border-sky-500 text-sky-600 bg-sky-50' : 'border-slate-100 text-slate-600 hover:border-sky-500 hover:text-sky-600 hover:bg-sky-50'
+                            }`}
                         >
                           <Sparkles size={16} className={selected ? 'text-sky-500' : 'text-slate-300 group-hover:text-sky-500'} />
                           {lvl}

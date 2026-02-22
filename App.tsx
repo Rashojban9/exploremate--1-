@@ -28,7 +28,8 @@ import GalleryPage from './pages/GalleryPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
-import { clearSession, getCurrentUser, getStoredSession, type AuthResponse } from './services/api';
+import { clearSession, getStoredSession } from './services/storageService';
+import { getCurrentUser, login as authLogin, type AuthResponse } from './services/authService';
 
 type ViewState = 'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'about' | 'faq' | 'news' | 'features' | 'saved' | 'trips' | 'profile' | 'notifications' | 'route-optimizer' | 'translator' | 'qr-guide' | 'group-plan' | 'ai-suggestion' | 'admin' | 'blog' | 'pricing' | 'contact' | 'testimonials' | 'gallery' | 'help' | 'terms' | 'privacy';
 
@@ -157,6 +158,7 @@ export default function App() {
   const [view, setView] = useState<ViewState>('landing');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
   const isAdmin = userRole?.toUpperCase() === 'ADMIN';
 
   useEffect(() => {
@@ -173,12 +175,22 @@ export default function App() {
       }
 
       try {
-        const currentUser = await getCurrentUser();
-        if (!isActive) {
+        // If it's a demo token, don't validate with server (which doesn't know demo users)
+        if (storedSession.token.startsWith('demo-token-')) {
+          if (isActive) {
+            setIsLoggedIn(true);
+            setUserRole(storedSession.user.role);
+            setUserName(storedSession.user.name || 'Explorer');
+          }
           return;
         }
+
+        const currentUser = await getCurrentUser();
+        if (!isActive) return;
+
         setIsLoggedIn(true);
         setUserRole(currentUser.role);
+        setUserName(currentUser.name || 'Explorer');
       } catch {
         if (!isActive) {
           return;
@@ -186,6 +198,7 @@ export default function App() {
         clearSession();
         setIsLoggedIn(false);
         setUserRole(null);
+        setUserName('');
         setView('landing');
       }
     };
@@ -216,9 +229,25 @@ export default function App() {
   }, [view, isAdmin, isLoggedIn]);
 
   const handleNavigate = (page: string) => setView(page as any);
-  const handleLogin = (auth: AuthResponse) => { setIsLoggedIn(true); setUserRole(auth.role); setView('dashboard'); };
-  const handleSignup = (auth: AuthResponse) => { setIsLoggedIn(true); setUserRole(auth.role); setView('dashboard'); };
-  const handleLogout = () => { clearSession(); setIsLoggedIn(false); setUserRole(null); setView('landing'); };
+  const handleLogin = (auth: AuthResponse) => {
+    setIsLoggedIn(true);
+    setUserRole(auth.role);
+    setUserName(auth.name || 'Explorer');
+    setView('dashboard');
+  };
+  const handleSignup = (auth: AuthResponse) => {
+    setIsLoggedIn(true);
+    setUserRole(auth.role);
+    setUserName(auth.name || 'Explorer');
+    setView('dashboard');
+  };
+  const handleLogout = () => {
+    clearSession();
+    setIsLoggedIn(false);
+    setUserRole(null);
+    setUserName('');
+    setView('landing');
+  };
 
   const renderView = () => {
     switch (view) {
@@ -226,10 +255,10 @@ export default function App() {
       case 'login': return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
       case 'signup': return <SignupPage onSignup={handleSignup} onNavigate={handleNavigate} />;
       case 'forgot-password': return <ForgotPasswordPage onNavigate={handleNavigate} />;
-      case 'dashboard': return <DashboardPage onLogout={handleLogout} onNavigate={handleNavigate} />;
+      case 'dashboard': return <DashboardPage onLogout={handleLogout} onNavigate={handleNavigate} userName={userName} />;
       case 'saved': return <SavedPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
       case 'trips': return <TripsPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
-      case 'profile': return <ProfilePage onLogout={handleLogout} onNavigate={handleNavigate} />;
+      case 'profile': return <ProfilePage onLogout={handleLogout} onNavigate={handleNavigate} onProfileUpdate={(name) => setUserName(name)} />;
       case 'notifications': return <NotificationsPage onNavigate={handleNavigate} />;
       case 'route-optimizer': return <RouteOptimizerPage onNavigate={handleNavigate} />;
       case 'translator': return <TranslatorPage onNavigate={handleNavigate} />;

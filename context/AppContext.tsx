@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect, ReactNode } from 'react';
-import { getStoredSession, getCurrentUser, type AuthResponse, type CurrentUserResponse } from '../services/api';
+import { getStoredSession } from '../services/storageService';
+import { getCurrentUser, logout as authLogout, type AuthResponse, type CurrentUserResponse } from '../services/authService';
 
 // Types
 export interface User {
@@ -187,10 +188,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [state.ui.notifications]);
 
   const login = useCallback((auth: AuthResponse) => {
-    dispatch({ type: 'SET_USER', payload: auth as unknown as User });
+    dispatch({
+      type: 'SET_USER',
+      payload: {
+        id: auth.userId,
+        name: auth.name,
+        email: auth.email,
+        role: auth.role,
+      } as User,
+    });
   }, []);
 
   const logout = useCallback(() => {
+    authLogout();
     dispatch({ type: 'LOGOUT' });
   }, []);
 

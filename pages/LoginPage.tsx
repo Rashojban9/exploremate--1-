@@ -3,7 +3,7 @@ import { gsap } from 'gsap';
 import { ArrowRight, User, Eye, EyeOff, ShieldCheck, MapPin, AlertCircle } from 'lucide-react';
 import { InputField, Logo } from '../components/SharedUI';
 import { LOGIN_IMAGES } from '../assets/images';
-import { loginUser, type AuthResponse } from '../services/api';
+import { login as loginUser, type AuthResponse } from '../services/authService';
 
 const LOGIN_SLIDES = [
   {
@@ -138,9 +138,9 @@ const LoginPage = ({ onLogin, onNavigate }: { onLogin: (auth: AuthResponse) => v
           role: isAdminUser ? 'ADMIN' : 'USER'
         };
 
-        // Store in localStorage
-        localStorage.setItem('auth_token', mockAuth.token);
-        localStorage.setItem('auth_user', JSON.stringify({
+        // Store in localStorage using correct keys from storageService
+        localStorage.setItem('exploremate_token', mockAuth.token);
+        localStorage.setItem('exploremate_user', JSON.stringify({
           id: mockAuth.userId,
           name: mockAuth.name,
           email: mockAuth.email,
