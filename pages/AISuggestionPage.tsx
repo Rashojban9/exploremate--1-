@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ArrowLeft, Send, Sparkles, User, Bot, MapPin, Coffee, Compass, Camera, Trash2, StopCircle } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { askAiSuggestion } from '../services/api';
 
 interface Message {
   id: string;
@@ -70,25 +70,11 @@ const AISuggestionPage = ({ onNavigate }: { onNavigate: (page: string) => void }
     setIsLoading(true);
 
     try {
-      // 1. Try Real Gemini API
-      if (process.env.API_KEY) {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: text,
-          config: {
-            systemInstruction: "You are an expert travel guide for Nepal named ExploreMate. Provide concise, enthusiastic, and practical travel advice. Format lists with bullets.",
-          }
-        });
-        
-        const aiResponse = response.text || "I couldn't generate a response. Please try again.";
-        addAiMessage(aiResponse);
-      } else {
-        // 2. Fallback Simulation (No API Key)
-        throw new Error("No API Key");
-      }
+      const response = await askAiSuggestion(text);
+      const aiText = response.text || "I couldn't generate a response. Please try again.";
+      addAiMessage(aiText);
     } catch (error) {
-      console.warn("AI Request failed or no key, using simulation.", error);
+      console.warn("AI request failed, using simulation fallback.", error);
       simulateResponse(text);
     }
   };

@@ -20,8 +20,17 @@ import QRGuidePage from './pages/QRGuidePage';
 import GroupPlanPage from './pages/GroupPlanPage';
 import AISuggestionPage from './pages/AISuggestionPage';
 import AdminPage from './pages/AdminPage';
+import BlogPage from './pages/BlogPage';
+import PricingPage from './pages/PricingPage';
+import ContactPage from './pages/ContactPage';
+import TestimonialsPage from './pages/TestimonialsPage';
+import GalleryPage from './pages/GalleryPage';
+import HelpCenterPage from './pages/HelpCenterPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import { clearSession, getCurrentUser, getStoredSession, type AuthResponse } from './services/api';
 
-type ViewState = 'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'about' | 'faq' | 'news' | 'features' | 'saved' | 'trips' | 'profile' | 'notifications' | 'route-optimizer' | 'translator' | 'qr-guide' | 'group-plan' | 'ai-suggestion' | 'admin';
+type ViewState = 'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'about' | 'faq' | 'news' | 'features' | 'saved' | 'trips' | 'profile' | 'notifications' | 'route-optimizer' | 'translator' | 'qr-guide' | 'group-plan' | 'ai-suggestion' | 'admin' | 'blog' | 'pricing' | 'contact' | 'testimonials' | 'gallery' | 'help' | 'terms' | 'privacy';
 
 const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,25 +42,25 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
         onComplete: () => {
-            gsap.to(containerRef.current, {
-                yPercent: -100,
-                duration: 0.8,
-                ease: "power4.inOut",
-                onComplete
-            });
+          gsap.to(containerRef.current, {
+            yPercent: -100,
+            duration: 0.8,
+            ease: "power4.inOut",
+            onComplete
+          });
         }
       });
 
       const path = pathRef.current;
       const length = path?.getTotalLength() || 0;
-      
+
       gsap.set(path, { strokeDasharray: length, strokeDashoffset: length, opacity: 1 });
       gsap.set(".splash-char", { y: 100, opacity: 0, rotateX: -90 });
       gsap.set(".star", { opacity: 0, scale: 0 });
-      
+
       if (loaderRef.current) {
-          const circumference = 2 * Math.PI * 22;
-          gsap.set(loaderRef.current, { strokeDasharray: circumference, strokeDashoffset: circumference });
+        const circumference = 2 * Math.PI * 22;
+        gsap.set(loaderRef.current, { strokeDasharray: circumference, strokeDashoffset: circumference });
       }
 
       tl.to(".star", {
@@ -63,50 +72,50 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
       }, 0);
 
       const progress = { value: 0 };
-      
+
       tl.to(path, {
+        strokeDashoffset: 0,
+        duration: 2.5,
+        ease: "power2.inOut"
+      }, 0);
+
+      if (loaderRef.current) {
+        tl.to(loaderRef.current, {
           strokeDashoffset: 0,
           duration: 2.5,
           ease: "power2.inOut"
-      }, 0);
-      
-      if (loaderRef.current) {
-          tl.to(loaderRef.current, {
-              strokeDashoffset: 0,
-              duration: 2.5,
-              ease: "power2.inOut"
-          }, 0);
+        }, 0);
       }
 
       tl.to(progress, {
-          value: 1,
-          duration: 2.5,
-          ease: "power2.inOut",
-          onUpdate: () => {
-              if (path && planeRef.current) {
-                  const point = path.getPointAtLength(progress.value * length);
-                  const lookAhead = Math.min(progress.value * length + 1, length);
-                  const lookBehind = Math.max(0, progress.value * length - 1);
-                  const p1 = path.getPointAtLength(lookBehind);
-                  const p2 = path.getPointAtLength(lookAhead);
-                  const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI);
-                  
-                  gsap.set(planeRef.current, {
-                      x: point.x,
-                      y: point.y,
-                      rotation: angle
-                  });
-              }
+        value: 1,
+        duration: 2.5,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          if (path && planeRef.current) {
+            const point = path.getPointAtLength(progress.value * length);
+            const lookAhead = Math.min(progress.value * length + 1, length);
+            const lookBehind = Math.max(0, progress.value * length - 1);
+            const p1 = path.getPointAtLength(lookBehind);
+            const p2 = path.getPointAtLength(lookAhead);
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI);
+
+            gsap.set(planeRef.current, {
+              x: point.x,
+              y: point.y,
+              rotation: angle
+            });
           }
+        }
       }, 0);
 
       tl.to(".splash-char", {
-          y: 0,
-          opacity: 1,
-          rotateX: 0,
-          stagger: 0.05,
-          duration: 0.8,
-          ease: "back.out(1.7)"
+        y: 0,
+        opacity: 1,
+        rotateX: 0,
+        stagger: 0.05,
+        duration: 0.8,
+        ease: "back.out(1.7)"
       }, "-=1.5");
     }, containerRef);
     return () => ctx.revert();
@@ -114,31 +123,31 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
 
   const text = "ExploreMate";
   const chars = text.split("").map((char, i) => (
-      <span key={i} className="splash-char inline-block origin-bottom font-display font-bold text-5xl md:text-7xl text-white drop-shadow-2xl">
-          {char}
-      </span>
+    <span key={i} className="splash-char inline-block origin-bottom font-display font-bold text-5xl md:text-7xl text-white drop-shadow-2xl">
+      {char}
+    </span>
   ));
 
   return (
     <div ref={containerRef} className="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-sky-900/30 via-slate-950 to-slate-950 animate-[spin_60s_linear_infinite]"></div>
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-sky-900/30 via-slate-950 to-slate-950 animate-[spin_60s_linear_infinite]"></div>
+      </div>
+      <svg className="absolute w-full h-full pointer-events-none opacity-60" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+        <path ref={pathRef} d="M -100,500 C 300,500 400,100 600,100 S 900,300 1200,200" fill="none" stroke="rgba(14, 165, 233, 0.5)" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+      <div ref={planeRef} className="absolute top-0 left-0 -ml-10 -mt-10 w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(14,165,233,0.6)] z-20">
+        <Logo className="w-14 h-14" />
+      </div>
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="flex space-x-1 mb-8 overflow-hidden perspective-text">{chars}</div>
+        <div className="relative w-16 h-16">
+          <svg className="w-full h-full transform -rotate-90">
+            <circle cx="32" cy="32" r="22" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="4" fill="none" />
+            <circle ref={loaderRef} cx="32" cy="32" r="22" stroke="#0ea5e9" strokeWidth="4" fill="none" strokeLinecap="round" />
+          </svg>
         </div>
-        <svg className="absolute w-full h-full pointer-events-none opacity-60" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
-            <path ref={pathRef} d="M -100,500 C 300,500 400,100 600,100 S 900,300 1200,200" fill="none" stroke="rgba(14, 165, 233, 0.5)" strokeWidth="3" strokeLinecap="round" />
-        </svg>
-        <div ref={planeRef} className="absolute top-0 left-0 -ml-10 -mt-10 w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(14,165,233,0.6)] z-20">
-            <Logo className="w-14 h-14" />
-        </div>
-        <div className="relative z-10 flex flex-col items-center">
-            <div className="flex space-x-1 mb-8 overflow-hidden perspective-text">{chars}</div>
-            <div className="relative w-16 h-16">
-                <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="32" cy="32" r="22" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="4" fill="none" />
-                    <circle ref={loaderRef} cx="32" cy="32" r="22" stroke="#0ea5e9" strokeWidth="4" fill="none" strokeLinecap="round" />
-                </svg>
-            </div>
-        </div>
+      </div>
     </div>
   );
 };
@@ -147,24 +156,69 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [view, setView] = useState<ViewState>('landing');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const isAdmin = userRole?.toUpperCase() === 'ADMIN';
+
+  useEffect(() => {
+    let isActive = true;
+
+    const bootstrapSession = async () => {
+      const storedSession = getStoredSession();
+      if (!storedSession) {
+        if (isActive) {
+          setIsLoggedIn(false);
+          setUserRole(null);
+        }
+        return;
+      }
+
+      try {
+        const currentUser = await getCurrentUser();
+        if (!isActive) {
+          return;
+        }
+        setIsLoggedIn(true);
+        setUserRole(currentUser.role);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        clearSession();
+        setIsLoggedIn(false);
+        setUserRole(null);
+        setView('landing');
+      }
+    };
+
+    void bootstrapSession();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   // Hidden Master Access Gate (Admin)
   useEffect(() => {
     const handleUrlGate = () => {
       // Access via secret path or manual hash
       if (window.location.pathname === '/master-control' || window.location.pathname === '/admin' || window.location.hash === '#admin') {
-         setView('admin');
+        setView(isAdmin ? 'admin' : (isLoggedIn ? 'dashboard' : 'login'));
       }
     };
     window.addEventListener('popstate', handleUrlGate);
     handleUrlGate();
     return () => window.removeEventListener('popstate', handleUrlGate);
-  }, []);
+  }, [isAdmin, isLoggedIn]);
+
+  useEffect(() => {
+    if (view === 'admin' && !isAdmin) {
+      setView(isLoggedIn ? 'dashboard' : 'login');
+    }
+  }, [view, isAdmin, isLoggedIn]);
 
   const handleNavigate = (page: string) => setView(page as any);
-  const handleLogin = () => { setIsLoggedIn(true); setView('dashboard'); };
-  const handleSignup = () => { setIsLoggedIn(true); setView('dashboard'); };
-  const handleLogout = () => { setIsLoggedIn(false); setView('landing'); };
+  const handleLogin = (auth: AuthResponse) => { setIsLoggedIn(true); setUserRole(auth.role); setView('dashboard'); };
+  const handleSignup = (auth: AuthResponse) => { setIsLoggedIn(true); setUserRole(auth.role); setView('dashboard'); };
+  const handleLogout = () => { clearSession(); setIsLoggedIn(false); setUserRole(null); setView('landing'); };
 
   const renderView = () => {
     switch (view) {
@@ -186,7 +240,15 @@ export default function App() {
       case 'faq': return <FAQPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
       case 'news': return <NewsPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
       case 'features': return <FeaturesPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
-      case 'admin': return <AdminPage onBack={() => setView('landing')} />;
+      case 'blog': return <BlogPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'pricing': return <PricingPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'contact': return <ContactPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'testimonials': return <TestimonialsPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'gallery': return <GalleryPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'help': return <HelpCenterPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'terms': return <TermsPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'privacy': return <PrivacyPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
+      case 'admin': return isAdmin ? <AdminPage onBack={() => setView('landing')} /> : <LandingPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
       default: return <LandingPage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
     }
   };

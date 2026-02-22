@@ -358,7 +358,7 @@ const NewsPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => vo
                           <h3 className="text-xl font-bold font-display text-slate-900 mb-3 group-hover:text-sky-700 transition-colors leading-tight">
                              {news.title}
                           </h3>
-                          <div className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-2" dangerouslySetInnerHTML={{ __html: news.summary }} />
+                          <div className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-2">{news.summary}</div>
                           
                           {news.link ? (
                              <a href={news.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-slate-900 group-hover:text-sky-600 transition-colors mt-auto">

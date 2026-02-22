@@ -1,0 +1,17 @@
+# Render Blueprint for ExploreMate Frontend
+# This file defines the frontend service to be deployed on Render
+
+services:
+  - type: web
+    name: exploremate-frontend
+    env: docker
+    region: oregon
+    buildCommand: docker build -t frontend .
+    startCommand: docker run -p 80:8080 -e VITE_API_BASE_URL=$API_GATEWAY_URL frontend
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: exploremate-api-gateway
+          type: web
+          property: url
+    autoDeploy: true

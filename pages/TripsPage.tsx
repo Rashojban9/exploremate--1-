@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Calendar, MapPin, Clock, MoreVertical, Plus, Users, ArrowRight, Plane, CheckCircle2, AlertCircle, Compass, Mountain, User, Bell, X, ChevronLeft, Utensils, Camera, Share2, Edit2, Trash2, Coffee, Sun } from 'lucide-react';
 import { LOGIN_IMAGES, SIGNUP_IMAGES } from '../assets/images';
+import { createTrip, deleteTrip, listTrips, type ApiTrip, type ApiTripStatus } from '../services/api';
 
 const NEPAL_DESTINATIONS = [
   { name: "Kathmandu", image: LOGIN_IMAGES.BOUDHANATH },
@@ -20,52 +21,53 @@ const NEPAL_DESTINATIONS = [
   { name: "Swayambhunath", image: LOGIN_IMAGES.BOUDHANATH }
 ];
 
-const INITIAL_TRIPS = [
-  {
-    id: 1,
-    status: 'upcoming',
-    title: 'Amalfi Coast Summer',
-    location: 'Positano, Italy',
-    startDate: '2024-07-15',
-    endDate: '2024-07-22',
-    image: 'https://images.unsplash.com/photo-1533904350293-3da112575914?auto=format&fit=crop&q=80&w=800',
-    collaborators: ['https://i.pravatar.cc/150?img=1', 'https://i.pravatar.cc/150?img=5'],
-    daysLeft: 14
-  },
-  {
-    id: 2,
-    status: 'draft',
-    title: 'Kyoto Fall Colors',
-    location: 'Kyoto, Japan',
-    startDate: 'TBD',
-    endDate: 'TBD',
-    image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=800',
-    collaborators: [],
-    daysLeft: null
-  },
-  {
-    id: 3,
-    status: 'past',
-    title: 'Swiss Alps Hiking',
-    location: 'Interlaken, Switzerland',
-    startDate: '2023-09-10',
-    endDate: '2023-09-18',
-    image: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&q=80&w=800',
-    collaborators: ['https://i.pravatar.cc/150?img=3'],
-    daysLeft: -200
-  },
-  {
-    id: 4,
-    status: 'upcoming',
-    title: 'New York City Weekend',
-    location: 'New York, USA',
-    startDate: '2024-11-20',
-    endDate: '2024-11-24',
-    image: 'https://images.unsplash.com/photo-1496442226666-8d4a0e62e6e9?auto=format&fit=crop&q=80&w=800',
-    collaborators: ['https://i.pravatar.cc/150?img=8', 'https://i.pravatar.cc/150?img=9', 'https://i.pravatar.cc/150?img=10'],
-    daysLeft: 142
-  }
-];
+type TripUIStatus = 'upcoming' | 'past' | 'draft';
+
+interface TripUI {
+  id: number;
+  status: TripUIStatus;
+  title: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  image: string;
+  collaborators: string[];
+  daysLeft: number | null;
+}
+
+const DEFAULT_TRIP_IMAGE = 'https://images.unsplash.com/photo-1546853899-709e50423661?auto=format&fit=crop&q=80&w=800';
+
+const statusToApi = (status: TripUIStatus): ApiTripStatus => {
+  if (status === 'past') return 'PAST';
+  if (status === 'draft') return 'DRAFT';
+  return 'UPCOMING';
+};
+
+const statusFromApi = (status: ApiTripStatus): TripUIStatus => {
+  if (status === 'PAST') return 'past';
+  if (status === 'DRAFT') return 'draft';
+  return 'upcoming';
+};
+
+const matchTripImage = (location: string, fallback?: string | null): string => {
+  if (fallback) return fallback;
+  const matched = NEPAL_DESTINATIONS.find((dest) =>
+    location.toLowerCase().includes(dest.name.toLowerCase())
+  );
+  return matched?.image ?? DEFAULT_TRIP_IMAGE;
+};
+
+const mapTripToUI = (trip: ApiTrip): TripUI => ({
+  id: trip.id,
+  status: statusFromApi(trip.status),
+  title: trip.title,
+  location: trip.location,
+  startDate: trip.startDate ?? 'TBD',
+  endDate: trip.endDate ?? 'TBD',
+  image: matchTripImage(trip.location, trip.imageUrl),
+  collaborators: [],
+  daysLeft: trip.daysLeft
+});
 
 // Mock Data for Itinerary Details
 const MOCK_ITINERARY_DAYS = [
@@ -89,7 +91,7 @@ const MOCK_ITINERARY_DAYS = [
     }
 ];
 
-const TripCard: React.FC<{ trip: any; onClick: () => void }> = ({ trip, onClick }) => {
+const TripCard: React.FC<{ trip: TripUI; onClick: () => void }> = ({ trip, onClick }) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const onHover = (enter: boolean) => {
@@ -118,7 +120,7 @@ const TripCard: React.FC<{ trip: any; onClick: () => void }> = ({ trip, onClick 
             <div className="absolute top-4 left-4">
                 {trip.status === 'upcoming' && (
                     <div className="bg-sky-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
-                        <Clock size={12} /> {trip.daysLeft} days to go
+                        <Clock size={12} /> {trip.daysLeft != null ? `${trip.daysLeft} days to go` : 'Upcoming'}
                     </div>
                 )}
                 {trip.status === 'draft' && (
@@ -152,7 +154,7 @@ const TripCard: React.FC<{ trip: any; onClick: () => void }> = ({ trip, onClick 
             <div className="flex items-center gap-4 text-slate-600 text-sm font-medium mb-6">
                 <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
                     <Calendar size={16} className="text-slate-400" />
-                    <span>{trip.startDate} — {trip.endDate}</span>
+                    <span>{trip.startDate} - {trip.endDate}</span>
                 </div>
             </div>
 
@@ -186,7 +188,7 @@ const TripCard: React.FC<{ trip: any; onClick: () => void }> = ({ trip, onClick 
 };
 
 // --- Trip Detail / Itinerary View Component ---
-const TripDetailView = ({ trip, onBack, onDelete }: { trip: any, onBack: () => void, onDelete: (id: number) => void }) => {
+const TripDetailView = ({ trip, onBack, onDelete }: { trip: TripUI, onBack: () => void, onDelete: (id: number) => void }) => {
     const headerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -312,8 +314,10 @@ const TripDetailView = ({ trip, onBack, onDelete }: { trip: any, onBack: () => v
 
 const TripsPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void, onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'draft'>('upcoming');
-  const [trips, setTrips] = useState(INITIAL_TRIPS);
-  const [selectedTrip, setSelectedTrip] = useState<any | null>(null);
+  const [trips, setTrips] = useState<TripUI[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState<TripUI | null>(null);
+  const [isTripsLoading, setIsTripsLoading] = useState(true);
+  const [tripsError, setTripsError] = useState<string | null>(null);
   
   // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -329,6 +333,30 @@ const TripsPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
       if (activeTab === 'past') return trip.status === 'past';
       return trip.status === 'draft';
   });
+
+  const loadTrips = useCallback(async () => {
+    if (!isLoggedIn) {
+      setTrips([]);
+      setIsTripsLoading(false);
+      return;
+    }
+
+    setIsTripsLoading(true);
+    setTripsError(null);
+    try {
+      const apiTrips = await listTrips();
+      setTrips(apiTrips.map(mapTripToUI));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load trips.';
+      setTripsError(message);
+    } finally {
+      setIsTripsLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    loadTrips();
+  }, [loadTrips]);
 
   useEffect(() => {
     if (!selectedTrip) {
@@ -392,14 +420,19 @@ const TripsPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
     setShowSuggestions(false);
   };
 
-  const handleDeleteTrip = (id: number) => {
-    if (window.confirm("Are you sure you want to delete this trip?")) {
+  const handleDeleteTrip = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this trip?")) return;
+    try {
+        await deleteTrip(id);
         setTrips(prev => prev.filter(t => t.id !== id));
-        setSelectedTrip(null);
+        setSelectedTrip(current => (current?.id === id ? null : current));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to delete trip.';
+        setTripsError(message);
     }
   };
 
-  const handleCreateTrip = (e: React.FormEvent | null, status: 'upcoming' | 'draft' = 'upcoming') => {
+  const handleCreateTrip = async (e: React.FormEvent | null, status: 'upcoming' | 'draft' = 'upcoming') => {
       if (e) e.preventDefault();
       
       // Basic validation for confirmed trips
@@ -407,33 +440,34 @@ const TripsPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
           alert("Please select start and end dates for an upcoming trip.");
           return;
       }
-
-      const isTBD = !newTrip.startDate || !newTrip.endDate;
-      const start = newTrip.startDate ? new Date(newTrip.startDate) : new Date();
-      const today = new Date();
-      const diffTime = Math.abs(start.getTime() - today.getTime());
-      const daysLeft = isTBD ? null : Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      if (newTrip.startDate && newTrip.endDate && new Date(newTrip.endDate) < new Date(newTrip.startDate)) {
+          alert("End date cannot be before start date.");
+          return;
+      }
 
       const matchingDest = NEPAL_DESTINATIONS.find(d => d.name === newTrip.location) 
         || NEPAL_DESTINATIONS.find(d => newTrip.location.toLowerCase().includes(d.name.toLowerCase()))
         || NEPAL_DESTINATIONS[0];
 
-      const createdTrip = {
-          id: Date.now(),
-          status: status,
-          title: newTrip.title || "Untitled Trip",
-          location: newTrip.location || "Unknown Destination",
-          startDate: newTrip.startDate || 'TBD',
-          endDate: newTrip.endDate || 'TBD',
-          image: matchingDest.image,
-          collaborators: [],
-          daysLeft: daysLeft
-      };
+      try {
+          const created = await createTrip({
+              title: newTrip.title || "Untitled Trip",
+              location: newTrip.location || "Unknown Destination",
+              startDate: newTrip.startDate || undefined,
+              endDate: newTrip.endDate || undefined,
+              status: statusToApi(status),
+              imageUrl: matchingDest.image
+          });
 
-      setTrips([createdTrip, ...trips]);
-      setIsModalOpen(false);
-      setNewTrip({ title: '', location: '', startDate: '', endDate: '' });
-      setActiveTab(status === 'draft' ? 'draft' : 'upcoming');
+          setTrips((prev) => [mapTripToUI(created), ...prev]);
+          setIsModalOpen(false);
+          setNewTrip({ title: '', location: '', startDate: '', endDate: '' });
+          setActiveTab(status === 'draft' ? 'draft' : 'upcoming');
+          setTripsError(null);
+      } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unable to create trip.';
+          setTripsError(message);
+      }
   };
 
   const splitText = (text: string) => {
@@ -557,7 +591,21 @@ const TripsPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
 
                 {/* Trips List */}
                 <div ref={containerRef} className="space-y-6 min-h-[400px]">
-                    {filteredTrips.length > 0 ? (
+                    {isTripsLoading ? (
+                        <div className="space-y-4 animate-pulse">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="h-40 rounded-[2rem] bg-white border border-slate-100"></div>
+                            ))}
+                        </div>
+                    ) : tripsError ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-red-200 rounded-[2.5rem] bg-red-50/40">
+                            <h3 className="text-xl font-bold text-red-700 mb-2">Unable to load trips</h3>
+                            <p className="text-red-500 max-w-md mx-auto mb-6">{tripsError}</p>
+                            <button onClick={loadTrips} className="px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors">
+                                Retry
+                            </button>
+                        </div>
+                    ) : filteredTrips.length > 0 ? (
                         filteredTrips.map((trip) => (
                             <TripCard 
                                 key={trip.id} 

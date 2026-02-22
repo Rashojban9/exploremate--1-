@@ -1,86 +1,111 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Trash2, MapPin, Calendar, ArrowRight, Heart, BookOpen, Plane, Grid, Compass, Mountain, User, Bell, X, Share2, Clock, Star, DollarSign, ExternalLink } from 'lucide-react';
+import { deleteSavedItem, listSavedItems, type ApiSavedItem, type ApiSavedItemType } from '../services/api';
 
-const SAVED_ITEMS = [
-  {
-    id: 1,
-    type: 'destination',
-    title: 'Kyoto Ancient Temples',
-    location: 'Kyoto, Japan',
-    image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=800',
-    dateAdded: '2 days ago',
-    rating: 4.9,
-    price: '$1,200',
-    description: "Immerse yourself in the tranquility of Kyoto's historic temples. Experience traditional tea ceremonies, walk through the iconic Fushimi Inari shrines, and witness the breathtaking cherry blossoms in spring. This destination offers a perfect blend of spiritual heritage and natural beauty."
-  },
-  {
-    id: 2,
-    type: 'itinerary',
-    title: '2-Week Euro Summer',
-    duration: '14 Days',
-    image: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&q=80&w=800',
-    dateAdded: '1 week ago',
-    stops: 5,
-    budget: '$$$',
-    description: "A comprehensive tour through the highlights of Western Europe. Starting in Paris, moving through the Swiss Alps, and ending in the coastal towns of Italy. Perfect for first-time travelers wanting to see the classics."
-  },
-  {
-    id: 3,
-    type: 'article',
-    title: 'Hidden Gems in Himalayas',
-    author: 'Sarah Jenkins',
-    image: 'https://images.unsplash.com/photo-1585970281220-41834220b3c6?auto=format&fit=crop&q=80&w=800',
-    dateAdded: '2 weeks ago',
-    readTime: '9 min',
-    tag: 'Adventure',
-    description: "Beyond Everest Base Camp lies a world of untouched valleys and ancient monasteries. Discover the trekking routes less traveled, where local culture remains untouched by mass tourism."
-  },
-  {
-    id: 4,
-    type: 'destination',
-    title: 'Santorini Sunset',
-    location: 'Santorini, Greece',
-    image: 'https://images.unsplash.com/photo-1613395877344-13d4c79e4284?auto=format&fit=crop&q=80&w=800',
-    dateAdded: '3 weeks ago',
-    rating: 4.8,
-    price: '$2,400',
-    description: "Famous for its stunning sunsets and white-washed buildings, Santorini is the jewel of the Aegean Sea. Explore volcanic beaches, ancient vineyards, and luxury cliffside resorts."
-  },
-  {
-    id: 5,
-    type: 'itinerary',
-    title: 'Tokyo Food Tour',
-    duration: '3 Days',
-    image: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&q=80&w=800',
-    dateAdded: '1 month ago',
-    stops: 12,
-    budget: '$$',
-    description: "A culinary journey through Tokyo's most vibrant districts. From early morning sushi at Tsukiji Outer Market to late-night ramen in Shinjuku, taste the best of Japanese cuisine."
-  },
-  {
-    id: 6,
-    type: 'article',
-    title: 'Digital Nomad Life in Bali',
-    author: 'Alex Chen',
-    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
-    dateAdded: '1 month ago',
-    readTime: '6 min',
-    tag: 'Lifestyle',
-    description: "Looking to take your office on the road? We explore the best co-working spaces, cafes, and living arrangements in Bali for the modern remote worker."
+type SavedItemUIType = 'destination' | 'itinerary' | 'article';
+
+interface SavedItemUI {
+  id: number;
+  type: SavedItemUIType;
+  title: string;
+  location?: string;
+  image: string;
+  dateAdded: string;
+  description: string;
+  rating?: number;
+  price?: string;
+  duration?: string;
+  stops?: number;
+  budget?: string;
+  author?: string;
+  readTime?: string;
+  tag?: string;
+}
+
+const DEFAULT_SAVED_IMAGE = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800';
+
+const mapSavedType = (type: ApiSavedItemType): SavedItemUIType => {
+  if (type === 'ITINERARY') return 'itinerary';
+  if (type === 'ARTICLE') return 'article';
+  return 'destination';
+};
+
+const relativeTime = (isoDate: string): string => {
+  const target = new Date(isoDate).getTime();
+  if (Number.isNaN(target)) return 'just now';
+
+  const diffMs = Date.now() - target;
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+
+  if (diffMs < minute) return 'just now';
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)} min ago`;
+  if (diffMs < day) return `${Math.floor(diffMs / hour)} hour${Math.floor(diffMs / hour) > 1 ? 's' : ''} ago`;
+  if (diffMs < week) return `${Math.floor(diffMs / day)} day${Math.floor(diffMs / day) > 1 ? 's' : ''} ago`;
+  return `${Math.floor(diffMs / week)} week${Math.floor(diffMs / week) > 1 ? 's' : ''} ago`;
+};
+
+const mapSavedItemToUI = (item: ApiSavedItem): SavedItemUI => {
+  const type = mapSavedType(item.type);
+  const base: SavedItemUI = {
+    id: item.id,
+    type,
+    title: item.title,
+    location: item.location ?? undefined,
+    image: item.imageUrl ?? DEFAULT_SAVED_IMAGE,
+    dateAdded: relativeTime(item.dateAdded),
+    description: item.description ?? 'No description available.'
+  };
+
+  if (type === 'destination') {
+    return { ...base, rating: 4.8, price: '$$' };
   }
-];
+  if (type === 'itinerary') {
+    return { ...base, duration: 'Flexible', stops: 3, budget: '$$' };
+  }
+  return { ...base, author: 'ExploreMate', readTime: '5 min', tag: 'Guide' };
+};
 
 const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void, onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
   const [activeFilter, setActiveFilter] = useState('all');
-  const [selectedItem, setSelectedItem] = useState<typeof SAVED_ITEMS[0] | null>(null);
+  const [savedItems, setSavedItems] = useState<SavedItemUI[]>([]);
+  const [selectedItem, setSelectedItem] = useState<SavedItemUI | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const loadSavedItems = useCallback(async () => {
+    if (!isLoggedIn) {
+      setSavedItems([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const items = await listSavedItems();
+      setSavedItems(items.map(mapSavedItemToUI));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load saved items.';
+      setLoadError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    loadSavedItems();
+  }, [loadSavedItems]);
+
   const filteredItems = activeFilter === 'all' 
-    ? SAVED_ITEMS 
-    : SAVED_ITEMS.filter(item => item.type === activeFilter);
+    ? savedItems
+    : savedItems.filter(item => item.type === activeFilter);
 
   useEffect(() => {
     // Header Animation Context
@@ -188,6 +213,20 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
       }
   };
 
+  const handleDeleteSavedItem = async (itemId: number) => {
+    if (!window.confirm('Remove this saved item?')) return;
+
+    try {
+      await deleteSavedItem(itemId);
+      setSavedItems((prev) => prev.filter((item) => item.id !== itemId));
+      setSelectedItem((current) => (current?.id === itemId ? null : current));
+      setLoadError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to delete saved item.';
+      setLoadError(message);
+    }
+  };
+
   const navItems = [
     { label: 'Explore', icon: Compass, page: 'dashboard' },
     { label: 'Saved', icon: Mountain, page: 'saved' },
@@ -251,7 +290,7 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
                         {splitText("Your Collection")}
                     </h1>
                     <p className="saved-header-anim text-slate-500 text-lg max-w-lg">
-                        {SAVED_ITEMS.length} saved items waiting for your next adventure. Organized and ready when you are.
+                        {savedItems.length} saved items waiting for your next adventure. Organized and ready when you are.
                     </p>
                 </div>
                 
@@ -275,71 +314,93 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
             </div>
 
             {/* Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredItems.map((item) => (
-                    <div 
-                        key={item.id} 
-                        className="saved-grid-item group bg-white rounded-[2.5rem] p-4 shadow-sm border border-slate-100 flex flex-col h-full cursor-pointer relative overflow-hidden"
-                        onMouseEnter={(e) => onCardHover(e, true)}
-                        onMouseLeave={(e) => onCardHover(e, false)}
-                        onClick={() => setSelectedItem(item)}
-                    >
-                        <div className="relative h-64 rounded-[2rem] overflow-hidden mb-5">
-                            <img src={item.image} alt={item.title} className="card-img w-full h-full object-cover transition-transform duration-700" />
-                            <div className="absolute top-4 left-4 flex gap-2">
-                                <div className="type-badge px-4 py-2 bg-white/90 backdrop-blur-xl rounded-full text-xs font-bold text-slate-800 flex items-center gap-2 shadow-sm uppercase tracking-wider transition-all duration-300">
-                                    {getIcon(item.type)} {getLabel(item.type)}
+            {isLoading ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-pulse">
+                    {[1, 2, 3].map((item) => (
+                        <div key={item} className="h-96 bg-white rounded-[2.5rem] border border-slate-100"></div>
+                    ))}
+                </div>
+            ) : loadError ? (
+                <div className="text-center py-16 bg-red-50 rounded-[2.5rem] border border-red-200">
+                    <h3 className="text-2xl font-bold text-red-700 mb-3 font-display">Unable to load saved items</h3>
+                    <p className="text-red-500 max-w-md mx-auto mb-6">{loadError}</p>
+                    <button onClick={loadSavedItems} className="px-6 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors">
+                        Retry
+                    </button>
+                </div>
+            ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {filteredItems.map((item) => (
+                        <div 
+                            key={item.id} 
+                            className="saved-grid-item group bg-white rounded-[2.5rem] p-4 shadow-sm border border-slate-100 flex flex-col h-full cursor-pointer relative overflow-hidden"
+                            onMouseEnter={(e) => onCardHover(e, true)}
+                            onMouseLeave={(e) => onCardHover(e, false)}
+                            onClick={() => setSelectedItem(item)}
+                        >
+                            <div className="relative h-64 rounded-[2rem] overflow-hidden mb-5">
+                                <img src={item.image} alt={item.title} className="card-img w-full h-full object-cover transition-transform duration-700" />
+                                <div className="absolute top-4 left-4 flex gap-2">
+                                    <div className="type-badge px-4 py-2 bg-white/90 backdrop-blur-xl rounded-full text-xs font-bold text-slate-800 flex items-center gap-2 shadow-sm uppercase tracking-wider transition-all duration-300">
+                                        {getIcon(item.type)} {getLabel(item.type)}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleDeleteSavedItem(item.id);
+                                    }}
+                                    className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-xl text-white rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-[-10px] group-hover:translate-y-0"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                                
+                                {/* Gradient Overlay on Hover */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                            </div>
+
+                            <div className="px-2 pb-2 flex flex-col flex-grow">
+                                <div className="flex justify-between items-start mb-3">
+                                    <h3 className="text-2xl font-bold text-slate-900 font-display leading-tight group-hover:text-sky-600 transition-colors duration-300">
+                                        {item.title}
+                                    </h3>
+                                </div>
+
+                                {/* Type Specific Details */}
+                                <div className="mb-6 space-y-2">
+                                    {item.type === 'destination' && (
+                                        <div className="flex items-center justify-between text-sm font-medium">
+                                            <span className="flex items-center gap-2 text-slate-500"><MapPin size={16} className="text-sky-400" /> {item.location || 'Nepal'}</span>
+                                            <span className="text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">{item.price}</span>
+                                        </div>
+                                    )}
+                                    {item.type === 'itinerary' && (
+                                        <div className="flex items-center justify-between text-sm font-medium">
+                                            <span className="flex items-center gap-2 text-slate-500"><Calendar size={16} className="text-purple-400" /> {item.duration}</span>
+                                            <span className="text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full text-xs">{item.budget}</span>
+                                        </div>
+                                    )}
+                                    {item.type === 'article' && (
+                                        <div className="flex items-center justify-between text-sm font-medium">
+                                            <span className="flex items-center gap-2 text-slate-500"><BookOpen size={16} className="text-orange-400" /> {item.readTime}</span>
+                                            <span className="text-slate-400 text-xs">by {item.author}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-auto pt-5 border-t border-slate-50 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md">Added {item.dateAdded}</span>
+                                    <button className="action-area flex items-center gap-2 text-sm font-bold text-slate-900 transition-all duration-300">
+                                        View Details <ArrowRight size={18} />
+                                    </button>
                                 </div>
                             </div>
-                            <button className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-xl text-white rounded-full hover:bg-red-500 hover:text-white transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-[-10px] group-hover:translate-y-0">
-                                <Trash2 size={18} />
-                            </button>
-                            
-                            {/* Gradient Overlay on Hover */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                         </div>
-
-                        <div className="px-2 pb-2 flex flex-col flex-grow">
-                            <div className="flex justify-between items-start mb-3">
-                                <h3 className="text-2xl font-bold text-slate-900 font-display leading-tight group-hover:text-sky-600 transition-colors duration-300">
-                                    {item.title}
-                                </h3>
-                            </div>
-
-                            {/* Type Specific Details */}
-                            <div className="mb-6 space-y-2">
-                                {item.type === 'destination' && (
-                                    <div className="flex items-center justify-between text-sm font-medium">
-                                        <span className="flex items-center gap-2 text-slate-500"><MapPin size={16} className="text-sky-400" /> {item.location}</span>
-                                        <span className="text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">{item.price}</span>
-                                    </div>
-                                )}
-                                {item.type === 'itinerary' && (
-                                    <div className="flex items-center justify-between text-sm font-medium">
-                                        <span className="flex items-center gap-2 text-slate-500"><Calendar size={16} className="text-purple-400" /> {item.duration}</span>
-                                        <span className="text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full text-xs">{item.budget}</span>
-                                    </div>
-                                )}
-                                {item.type === 'article' && (
-                                    <div className="flex items-center justify-between text-sm font-medium">
-                                        <span className="flex items-center gap-2 text-slate-500"><BookOpen size={16} className="text-orange-400" /> {item.readTime}</span>
-                                        <span className="text-slate-400 text-xs">by {item.author}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="mt-auto pt-5 border-t border-slate-50 flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md">Added {item.dateAdded}</span>
-                                <button className="action-area flex items-center gap-2 text-sm font-bold text-slate-900 transition-all duration-300">
-                                    View Details <ArrowRight size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
             
-            {filteredItems.length === 0 && (
+            {!isLoading && !loadError && filteredItems.length === 0 && (
                 <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm animate-in fade-in zoom-in duration-500">
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
                         <Heart size={36} />

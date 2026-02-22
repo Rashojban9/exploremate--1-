@@ -1,20 +1,32 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Bell, Settings, User, LogOut, Menu, X, ChevronDown, Check } from 'lucide-react';
+
+// ============== Input Components ==============
 
 export interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   icon?: React.ReactNode;
   error?: string;
+  success?: boolean;
+  helperText?: string;
 }
 
-export const InputField: React.FC<InputFieldProps> = ({ label, icon, error, className, ...props }) => {
+export const InputField: React.FC<InputFieldProps> = ({ 
+  label, 
+  icon, 
+  error, 
+  success,
+  helperText,
+  className, 
+  ...props 
+}) => {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <div className={`group relative mb-6`}>
       <label 
         className={`block text-[0.7rem] font-bold uppercase tracking-[0.25em] mb-2 transition-colors duration-300 ${
-          isFocused ? 'text-sky-600' : 'text-slate-400'
+          error ? 'text-red-500' : success ? 'text-emerald-500' : isFocused ? 'text-sky-600' : 'text-slate-400'
         }`}
       >
         {label}
@@ -33,7 +45,9 @@ export const InputField: React.FC<InputFieldProps> = ({ label, icon, error, clas
           className={`
             w-full px-5 py-4 bg-white/70 border-2 rounded-2xl text-sm sm:text-base text-slate-900 placeholder-slate-400 outline-none transition-all duration-300 font-medium backdrop-blur
             ${error 
-              ? 'border-red-400 bg-red-50/80' 
+              ? 'border-red-400 bg-red-50/80 focus:border-red-500 focus:ring-2 focus:ring-red-200/60' 
+              : success
+              ? 'border-emerald-400 bg-emerald-50/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200/60'
               : isFocused 
                 ? 'border-sky-500 bg-white shadow-[0_18px_40px_-18px_rgba(14,165,233,0.35)] ring-2 ring-sky-200/60' 
                 : 'border-slate-200 hover:border-sky-300 hover:bg-white'
@@ -47,10 +61,18 @@ export const InputField: React.FC<InputFieldProps> = ({ label, icon, error, clas
           </div>
         )}
       </div>
-      {error && <p className="mt-1 text-xs text-red-500 font-medium animate-pulse">{error}</p>}
+      {(error || success || helperText) && (
+        <p className={`mt-1.5 text-xs font-medium ${
+          error ? 'text-red-500' : success ? 'text-emerald-500' : 'text-slate-500'
+        }`}>
+          {error || success || helperText}
+        </p>
+      )}
     </div>
   );
 };
+
+// ============== Global Aesthetic Background ==============
 
 export const GlobalAestheticBackground = () => (
   <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -74,6 +96,8 @@ export const GlobalAestheticBackground = () => (
     <div className="absolute top-[35%] right-[25%] w-[22vw] h-[22vw] bg-white/70 rounded-full mix-blend-overlay filter blur-[70px]"></div>
   </div>
 );
+
+// ============== Logo ==============
 
 export const Logo = ({ className = "w-12 h-12", variant = "default" }: { className?: string, variant?: "default" | "white" }) => {
   return (
@@ -125,4 +149,10 @@ export const Logo = ({ className = "w-12 h-12", variant = "default" }: { classNa
       <circle cx="50" cy="46" r="4" fill={variant === "white" ? "#0ea5e9" : "white"} />
     </svg>
   );
+};
+
+export default {
+  InputField,
+  GlobalAestheticBackground,
+  Logo
 };
