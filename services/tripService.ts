@@ -22,6 +22,9 @@ export interface TripRequest {
     placeName: string;
     placeDescription?: string;
     placePhotos?: string[];
+    startDate?: string;
+    endDate?: string;
+    status?: string;
 }
 
 export interface TripResponse {
@@ -32,6 +35,9 @@ export interface TripResponse {
     placeDescription?: string;
     placePhotos?: string[];
     userEmail: string;
+    startDate?: string;
+    endDate?: string;
+    status: string;
     createdAt: string;
     updatedAt: string;
 }
