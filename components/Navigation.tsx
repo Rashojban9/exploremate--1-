@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Twitter, Globe, Menu, X, Smartphone, Home, Info, Zap, Newspaper, Download } from 'lucide-react';
+import { Twitter, Globe, Menu, X, Smartphone, Home, Info, Zap, Newspaper, Download, LogOut, User, ChevronDown } from 'lucide-react';
 import { Logo } from './SharedUI';
 
 export const Footer = ({ onNavigate }: { onNavigate: (page: string) => void }) => (
@@ -50,9 +50,10 @@ export const Footer = ({ onNavigate }: { onNavigate: (page: string) => void }) =
   </footer>
 );
 
-export const Navbar = ({ onNavigate, isLoggedIn = false }: { onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
+export const Navbar = ({ onNavigate, isLoggedIn = false, onLogout }: { onNavigate: (page: string) => void, isLoggedIn?: boolean, onLogout?: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -103,9 +104,43 @@ export const Navbar = ({ onNavigate, isLoggedIn = false }: { onNavigate: (page: 
 
         <div className="hidden md:flex items-center gap-3 lg:gap-4">
           {isLoggedIn ? (
-            <button onClick={() => onNavigate('dashboard')} className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-lg bg-gradient-to-r from-sky-600 to-purple-600 text-white hover:shadow-xl hover:scale-105 active:scale-95`}>
-              Dashboard
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 px-3 py-2 rounded-full bg-gradient-to-r from-sky-600 to-purple-600 text-white font-bold text-sm hover:shadow-xl transition-all"
+              >
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <User size={16} />
+                </div>
+                <span className="hidden lg:inline">Account</span>
+                <ChevronDown size={16} className={`transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50">
+                  <button 
+                    onClick={() => { onNavigate('dashboard'); setShowUserMenu(false); }}
+                    className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors flex items-center gap-3"
+                  >
+                    <User size={18} /> Dashboard
+                  </button>
+                  <button 
+                    onClick={() => { onNavigate('profile'); setShowUserMenu(false); }}
+                    className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors flex items-center gap-3"
+                  >
+                    <User size={18} /> My Profile
+                  </button>
+                  <div className="my-1 border-t border-slate-100"></div>
+                  <button 
+                    onClick={() => { if (onLogout) onLogout(); setShowUserMenu(false); }}
+                    className="w-full px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
+                  >
+                    <LogOut size={18} /> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <>
               <button onClick={() => onNavigate('login')} className={`text-sm font-bold transition-colors text-slate-700 hover:text-sky-600`}>
@@ -148,9 +183,17 @@ export const Navbar = ({ onNavigate, isLoggedIn = false }: { onNavigate: (page: 
           <div className="my-2 border-t border-slate-50"></div>
 
           {isLoggedIn ? (
-            <button onClick={() => { onNavigate('dashboard'); setIsOpen(false); }} className="w-full py-4 text-center font-bold text-white bg-sky-900 rounded-2xl shadow-xl shadow-sky-900/10 active:scale-[0.98] transition-transform">
-              Go to Dashboard
-            </button>
+            <>
+              <button onClick={() => { onNavigate('dashboard'); setIsOpen(false); }} className="w-full py-4 text-center font-bold text-white bg-sky-900 rounded-2xl shadow-xl shadow-sky-900/10 active:scale-[0.98] transition-transform">
+                Go to Dashboard
+              </button>
+              <button 
+                onClick={() => { if (onLogout) onLogout(); setIsOpen(false); }} 
+                className="w-full py-4 text-center font-bold text-red-600 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <LogOut size={18} /> Sign Out
+              </button>
+            </>
           ) : (
             <div className="flex gap-3 mt-2">
               <button onClick={() => { onNavigate('login'); setIsOpen(false); }} className="flex-1 py-4 text-center font-bold text-slate-700 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors">

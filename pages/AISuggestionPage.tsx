@@ -56,7 +56,9 @@ const AISuggestionPage = ({ onNavigate }: { onNavigate: (page: string) => void }
   }, [messages, isLoading]);
 
   const handleSendMessage = async (text: string = inputValue) => {
-    if (!text.trim()) return;
+    if (!text.trim()) {
+      return;
+    }
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -69,12 +71,13 @@ const AISuggestionPage = ({ onNavigate }: { onNavigate: (page: string) => void }
     setInputValue("");
     setIsLoading(true);
 
+    // Call the actual backend API
     try {
       const response = await askAiSuggestion(text);
-      const aiText = response.text || "I couldn't generate a response. Please try again.";
-      addAiMessage(aiText);
+      addAiMessage(response.suggestion);
     } catch (error) {
-      console.warn("AI request failed, using simulation fallback.", error);
+      console.error('AI suggestion error:', error);
+      // Fallback to simulation if API fails
       simulateResponse(text);
     }
   };
