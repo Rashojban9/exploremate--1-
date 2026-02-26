@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { MapPin, Languages, QrCode, Users, Bell, Sun, Moon, Compass, ArrowRight, Sparkles, Search, Mountain, Calendar, User, Cloud, CloudRain, Snowflake, CloudLightning, Wind, CloudDrizzle, Droplets, Eye, Thermometer, BrainCircuit, CloudMoon } from 'lucide-react';
+import { MapPin, Languages, QrCode, Users, Bell, Sun, Moon, Compass, ArrowRight, Sparkles, Search, Mountain, Calendar, User, Cloud, CloudRain, Snowflake, CloudLightning, Wind, CloudDrizzle, Droplets, Eye, Thermometer, BrainCircuit, CloudMoon, Loader, MessageSquare, Trash2 } from 'lucide-react';
 import { Logo } from '../components/SharedUI';
 import { LOGIN_IMAGES } from '../assets/images';
+import { askAiSuggestion, getSessionId, getChatHistory } from '../services/aiService';
 
 interface WeatherData {
   temp: number;
@@ -18,6 +19,7 @@ interface WeatherData {
 
 const DashboardPage = ({ onLogout, onNavigate, userName }: { onLogout: () => void, onNavigate: (page: string) => void, userName?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const aiInputRef = useRef<HTMLInputElement>(null);
 
   const [weather, setWeather] = useState<WeatherData>({
     temp: 0,
@@ -33,7 +35,57 @@ const DashboardPage = ({ onLogout, onNavigate, userName }: { onLogout: () => voi
 
   const [aiSuggestion, setAiSuggestion] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
+  const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [aiLoading, setAiLoading] = useState<boolean>(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [recentMessages, setRecentMessages] = useState<{ role: string; text: string }[]>([]);
+  const [showChatHistory, setShowChatHistory] = useState<boolean>(false);
   const locationRef = useRef<{ lat: number, lon: number } | null>(null);
+
+  // Load recent chat history on mount
+  useEffect(() => {
+    const loadRecentChat = async () => {
+      try {
+        const sid = getSessionId();
+        const history = await getChatHistory(sid);
+        if (history && history.length > 0) {
+          // Get last 4 messages (2 conversations)
+          const recent = history.slice(-4).map((msg: any) => ({
+            role: msg.role,
+            text: msg.content
+          }));
+          setRecentMessages(recent);
+        }
+      } catch (error) {
+        console.log('No chat history found');
+      }
+    };
+    loadRecentChat();
+  }, []);
+
+  const handleAIGo = async () => {
+    if (aiPrompt.trim()) {
+      setAiLoading(true);
+      try {
+        const response = await askAiSuggestion(aiPrompt);
+        const responseText = response.text;
+        setAiResponse(responseText);
+        onNavigate('ai-suggestion');
+        // Store the response in sessionStorage for the AI page to use
+        sessionStorage.setItem('dashboardAiResponse', responseText);
+        sessionStorage.setItem('dashboardAiPrompt', aiPrompt);
+      } catch (error) {
+        console.error('AI request failed:', error);
+        const errorText = 'Sorry, I failed to get a response. Please try again.';
+        setAiResponse(errorText);
+        onNavigate('ai-suggestion');
+        sessionStorage.setItem('dashboardAiResponse', errorText);
+        sessionStorage.setItem('dashboardAiPrompt', aiPrompt);
+      } finally {
+        setAiLoading(false);
+      }
+    }
+  };
 
   const getWeatherDescription = (code: number) => {
     if (code === 0) return "Clear skies";
@@ -199,12 +251,88 @@ const DashboardPage = ({ onLogout, onNavigate, userName }: { onLogout: () => voi
             <h2 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-2"><Sparkles size={20} className="text-sky-500" /> Plan with AI</h2>
             <div className="bg-slate-50 rounded-2xl p-2 flex items-center border border-slate-200 focus-within:ring-4 focus-within:ring-sky-100 transition-all">
               <Search className="text-slate-400 ml-4 shrink-0" size={20} />
-              <input type="text" placeholder="Plan 2 days in Pokhara..." className="w-full bg-transparent p-4 outline-none text-slate-700 font-medium" />
-              <button className="p-4 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition-all shadow-lg active:scale-95 flex items-center gap-2 font-bold shrink-0">
-                <span className="hidden sm:inline">Go</span> <ArrowRight size={18} />
+              <input 
+                ref={aiInputRef}
+                type="text" 
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAIGo()}
+                placeholder="Plan 2 days in Pokhara..." 
+                className="w-full bg-transparent p-4 outline-none text-slate-700 font-medium" 
+              />
+              <button 
+                onClick={handleAIGo}
+                disabled={aiLoading}
+                className={`p-4 text-white rounded-xl shadow-lg active:scale-95 flex items-center gap-2 font-bold shrink-0 transition-all ${
+                  aiLoading 
+                    ? 'bg-slate-400 cursor-not-allowed' 
+                    : 'bg-sky-600 hover:bg-sky-700'
+                }`}
+              >
+                {aiLoading ? (
+                  <>
+                    <Loader size={18} className="animate-spin" />
+                    <span className="hidden sm:inline">Loading</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Go</span> <ArrowRight size={18} />
+                  </>
+                )}
               </button>
             </div>
           </div>
+
+          {/* Recent Chat History */}
+          {recentMessages.length > 0 && (
+            <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-slate-100">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <MessageSquare size={18} className="text-sky-500" />
+                  Recent Chats
+                </h3>
+                <button 
+                  onClick={() => onNavigate('ai-suggestion')}
+                  className="text-xs font-bold text-sky-600 hover:underline"
+                >
+                  View All
+                </button>
+              </div>
+              <div className="space-y-3 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                {recentMessages.map((msg, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      msg.role === 'user' ? 'bg-slate-200' : 'bg-gradient-to-br from-sky-500 to-emerald-500'
+                    }`}>
+                      {msg.role === 'user' ? (
+                        <User className="w-4 h-4 text-slate-600" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+                    <div className={`max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                      <div className={`px-4 py-2 rounded-2xl text-sm ${
+                        msg.role === 'user' 
+                          ? 'bg-sky-600 text-white rounded-tr-md' 
+                          : 'bg-slate-100 text-slate-700 rounded-tl-md'
+                      }`}>
+                        {msg.text.length > 100 ? msg.text.substring(0, 100) + '...' : msg.text}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => onNavigate('ai-suggestion')}
+                className="w-full mt-4 py-2 bg-sky-50 text-sky-600 rounded-xl font-medium text-sm hover:bg-sky-100 transition-colors"
+              >
+                Continue this conversation →
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

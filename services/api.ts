@@ -59,7 +59,11 @@ export {
 // ─── AI ───────────────────────────────────────────────────────────────────────
 export {
   askAiSuggestion,
+  getSessionId,
+  getChatHistory,
+  clearChatHistory,
   type AiSuggestionResponse,
+  type ChatMessage,
 } from './aiService';
 
 // ─── Notification ─────────────────────────────────────────────────────────────
