@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { User, MapPin, Settings, Camera, Edit2, LogOut, Mail, Globe, Shield, Bell, CreditCard, Compass, Mountain, Calendar, Check, Plane, Phone, Users, DollarSign, ChevronDown, X, Save } from 'lucide-react';
+import { Bell, Calendar, Camera, Check, ChevronDown, Compass, CreditCard, DollarSign, Edit2, Globe, LogOut, Mail, MapPin, Mountain, Phone, Plane, Save, Settings, Shield, User, Users, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { InputField } from '../components/SharedUI';
 import { getProfile, updateProfile, type ProfileUpdatePayload } from '../services/authService';
+import { getTripStats, type UserTripStats } from '../services/tripService';
 
 const CURRENCIES = [
    { code: 'USD', name: 'US Dollar', symbol: '$' },
@@ -27,6 +28,7 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
    const [isEditing, setIsEditing] = useState(false);
    const [currency, setCurrency] = useState('USD');
    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+   const [isLogoutAllModalOpen, setIsLogoutAllModalOpen] = useState(false);
 
    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
@@ -39,14 +41,36 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
       phone: "",
       nationality: "",
       interests: [] as string[],
-      budget: 50, // 0 to 100 representing range
+      budget: 0, // 0 to 100000 representing NPR per day
       travelStyle: "Solo"
    });
 
+   // Trip Stats State
+   const [tripStats, setTripStats] = useState<UserTripStats>({
+      totalTrips: 0,
+      completedTrips: 0,
+      upcomingTrips: 0,
+      missedTrips: 0,
+      draftTrips: 0
+   });
+
    // Image State
-   // Using reliable Unsplash images for defaults
-   const [profileImage, setProfileImage] = useState("https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=300&h=300");
-   const [coverImage, setCoverImage] = useState("https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=1200");
+   // Use empty string initially, will be set from database or default
+   const [profileImage, setProfileImage] = useState("");
+   const [coverImage, setCoverImage] = useState("");
+   
+   // Get initials for default avatar with color
+   const getInitials = (name: string) => {
+      const firstLetter = name ? name.charAt(0).toUpperCase() : '?';
+      const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+      const colorIndex = name ? name.charCodeAt(0) % colors.length : 0;
+      return { letter: firstLetter, color: colors[colorIndex] };
+   };
+   
+   // Default cover image
+   const DEFAULT_COVER = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=1200";
+   
+   // Use empty string initially, will be set from database or default
    const [isSaving, setIsSaving] = useState(false);
    const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -73,6 +97,7 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                travelStyle: profile.travelStyle || prev.travelStyle,
             }));
             if (profile.profilePicture) setProfileImage(profile.profilePicture);
+            else setProfileImage(""); // Empty means show initials
          } catch (err) {
             console.error('Failed to load profile:', err);
          } finally {
@@ -80,6 +105,19 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
          }
       };
       void loadProfile();
+   }, []);
+
+   // Load trip stats
+   useEffect(() => {
+      const loadTripStats = async () => {
+         try {
+            const stats = await getTripStats();
+            setTripStats(stats);
+         } catch (err) {
+            console.error('Failed to load trip stats:', err);
+         }
+      };
+      void loadTripStats();
    }, []);
 
    // Animation setup
@@ -169,8 +207,8 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
             title: userProfile.title,
             interests: userProfile.interests,
             budget: userProfile.budget,
-            travelStyle: userProfile.travelStyle,
-            profilePicture: profileImage,
+            // Save only if user uploaded a custom photo (not the default avatar)
+            profilePicture: profileImage ? profileImage : undefined,
          };
          const updated = await updateProfile(payload);
          const newName = updated.name || userProfile.name || 'Explorer';
@@ -271,7 +309,7 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
             <div className="profile-card bg-white rounded-[2.5rem] shadow-xl border border-white/60 overflow-hidden relative">
                {/* Cover Image */}
                <div className="h-48 w-full relative overflow-hidden bg-slate-200">
-                  <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
+                  <img src={coverImage || DEFAULT_COVER} alt="Cover" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
 
                   <button
@@ -294,7 +332,13 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                      {/* Avatar */}
                      <div className="relative group z-10">
                         <div className="w-32 h-32 rounded-[2rem] p-1 bg-white shadow-lg">
-                           <img src={profileImage} alt="Profile" className="w-full h-full rounded-[1.8rem] object-cover" />
+                           {profileImage ? (
+                              <img src={profileImage} alt="Profile" className="w-full h-full rounded-[1.8rem] object-cover" />
+                           ) : (
+                              <div className="w-full h-full rounded-[1.8rem] flex items-center justify-center text-4xl font-bold text-white" style={{ backgroundColor: getInitials(userProfile.name).color }}>
+                                 {getInitials(userProfile.name).letter}
+                              </div>
+                           )}
                         </div>
                         <button
                            onClick={() => profileInputRef.current?.click()}
@@ -375,18 +419,22 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+                  <div className="grid grid-cols-4 gap-4 border-t border-slate-100 pt-6">
                      <div className="text-center">
-                        <div className="text-2xl font-bold text-slate-900 font-display">12</div>
-                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Districts</div>
+                        <div className="text-2xl font-bold text-sky-600 font-display">{tripStats.totalTrips}</div>
+                        <div className="text-xs text-sky-600 font-bold uppercase tracking-wider">Total Trips</div>
                      </div>
                      <div className="text-center border-l border-slate-100">
-                        <div className="text-2xl font-bold text-slate-900 font-display">8</div>
-                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Treks</div>
+                        <div className="text-2xl font-bold text-emerald-600 font-display">{tripStats.completedTrips}</div>
+                        <div className="text-xs text-emerald-600 font-bold uppercase tracking-wider">Trip Completed</div>
                      </div>
                      <div className="text-center border-l border-slate-100">
-                        <div className="text-2xl font-bold text-slate-900 font-display">156</div>
-                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Memories</div>
+                        <div className="text-2xl font-bold text-rose-600 font-display">{tripStats.missedTrips}</div>
+                        <div className="text-xs text-rose-600 font-bold uppercase tracking-wider">Trip Missed</div>
+                     </div>
+                     <div className="text-center border-l border-slate-100">
+                        <div className="text-2xl font-bold text-amber-600 font-display">{tripStats.upcomingTrips}</div>
+                        <div className="text-xs text-amber-600 font-bold uppercase tracking-wider">Trip Upcoming</div>
                      </div>
                   </div>
                </div>
@@ -446,18 +494,18 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                      <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 space-y-6">
                         <div>
                            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                              <CreditCard size={20} className="text-emerald-500" /> Budget Range
+                              <CreditCard size={20} className="text-emerald-500" /> Daily Budget (NPR)
                            </h3>
                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden relative">
                               <div
                                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                                 style={{ width: `${userProfile.budget}%` }}
+                                 style={{ width: `${(userProfile.budget / 100000) * 100}%` }}
                               ></div>
                               {isEditing && (
                                  <input
                                     type="range"
                                     min="0"
-                                    max="100"
+                                    max="100000"
                                     value={userProfile.budget}
                                     onChange={(e) => setUserProfile({ ...userProfile, budget: parseInt(e.target.value) })}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -465,9 +513,9 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                               )}
                            </div>
                            <div className="flex justify-between mt-2 text-xs font-bold text-slate-400">
-                              <span>Budget</span>
-                              <span className="text-emerald-600">{userProfile.budget > 66 ? 'Luxury' : (userProfile.budget > 33 ? 'Moderate' : 'Budget')} (${userProfile.budget * 5}-{userProfile.budget * 10}/day)</span>
-                              <span>Luxury</span>
+                              <span>Rs. 0</span>
+                              <span className="text-emerald-600">Rs. {userProfile.budget}/day</span>
+                              <span>Rs. 1 Lakh</span>
                            </div>
                         </div>
 
@@ -479,9 +527,13 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                               {['Solo', 'Couple', 'Group'].map(style => (
                                  <button
                                     key={style}
-                                    onClick={() => isEditing && setUserProfile({ ...userProfile, travelStyle: style })}
+                                    onClick={() => {
+                                         if (isEditing) {
+                                            setUserProfile({ ...userProfile, travelStyle: style });
+                                         }
+                                      }}
                                     className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${userProfile.travelStyle === style
-                                       ? 'bg-purple-50 text-purple-700'
+                                       ? 'bg-purple-500 text-white'
                                        : 'bg-white border border-slate-200 text-slate-500 opacity-50 hover:opacity-100'
                                        }`}
                                  >
@@ -577,7 +629,10 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                               <Check size={18} className="text-slate-300" />
                            </button>
 
-                           <button className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-red-300 group transition-all">
+                           <button 
+                              onClick={() => setIsLogoutAllModalOpen(true)}
+                              className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-red-300 group transition-all"
+                           >
                               <div className="flex items-center gap-3">
                                  <div className="p-2 bg-red-50 text-red-600 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
                                     <LogOut size={18} />
@@ -631,6 +686,43 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                         </button>
                      </div>
                   </form>
+               </div>
+            </div>
+         )}
+
+         {/* Log Out All Devices Modal */}
+         {isLogoutAllModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+               <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 relative">
+                  <button onClick={() => setIsLogoutAllModalOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-50 rounded-full">
+                     <X size={24} />
+                  </button>
+                  <div className="text-center">
+                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <LogOut size={32} className="text-red-600" />
+                     </div>
+                     <h2 className="text-2xl font-bold text-slate-900 mb-2 font-display">Log Out All Devices</h2>
+                     <p className="text-slate-500 mb-6">
+                        Are you sure you want to log out from all devices? You'll need to sign in again on all your devices.
+                     </p>
+                     <div className="flex gap-3">
+                        <button
+                           onClick={() => setIsLogoutAllModalOpen(false)}
+                           className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors"
+                        >
+                           Cancel
+                        </button>
+                        <button
+                           onClick={() => {
+                              setIsLogoutAllModalOpen(false);
+                              onLogout();
+                           }}
+                           className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all active:scale-95"
+                        >
+                           Log Out All
+                        </button>
+                     </div>
+                  </div>
                </div>
             </div>
          )}

@@ -1,7 +1,9 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin } from 'lucide-react';
+import React from 'react';
+import { MapContainer, Marker, Popup, TileLayer, ZoomControl } from 'react-leaflet';
+
+// Get Mapbox token from environment
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
 // Fix for default Leaflet marker icons not rendering in some environments
 const iconSvg = `
@@ -18,6 +20,15 @@ export const customIcon = new L.DivIcon({
   iconAnchor: [15, 30],
   popupAnchor: [0, -30]
 });
+
+// Mapbox tile URL
+const mapboxTileUrl = MAPBOX_TOKEN 
+  ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tile/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`
+  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+const mapboxAttribution = MAPBOX_TOKEN 
+  ? '&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
+  : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 interface LeafletMapProps {
   className?: string;
@@ -42,8 +53,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={mapboxAttribution}
+          url={mapboxTileUrl}
         />
         <ZoomControl position="bottomright" />
         
@@ -70,9 +81,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         )}
       </MapContainer>
       
-      {/* Overlay to show it's free */}
+      {/* Overlay to show map provider */}
       <div className="absolute top-4 right-4 z-[400] bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-slate-500 shadow-sm border border-slate-200">
-        OpenStreetMap Data
+        {MAPBOX_TOKEN ? 'Mapbox' : 'OpenStreetMap'}
       </div>
     </div>
   );

@@ -68,3 +68,16 @@ export async function deleteTrip(id: string): Promise<void> {
 export async function searchTrips(place: string): Promise<TripResponse[]> {
     return get<TripResponse[]>(`/api/trips/search?place=${encodeURIComponent(place)}`, true);
 }
+
+/** Get user trip statistics */
+export interface UserTripStats {
+    totalTrips: number;
+    completedTrips: number;
+    upcomingTrips: number;
+    missedTrips: number;
+    draftTrips: number;
+}
+
+export async function getTripStats(): Promise<UserTripStats> {
+    return get<UserTripStats>('/api/trips/stats', true);
+}

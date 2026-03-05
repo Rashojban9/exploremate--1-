@@ -19,6 +19,7 @@ export interface StoredSession {
 
 const TOKEN_KEY = 'exploremate_token';
 const USER_KEY = 'exploremate_user';
+const VIEW_KEY = 'exploremate_current_view';
 
 // ─── Token ────────────────────────────────────────────────────────────────────
 
@@ -71,4 +72,18 @@ export function getStoredSession(): StoredSession | null {
         return null;
     }
     return { token, user };
+}
+
+// ─── Current View (for page persistence) ──────────────────────────────────────
+
+export function saveCurrentView(view: string): void {
+    localStorage.setItem(VIEW_KEY, view);
+}
+
+export function getCurrentView(): string | null {
+    return localStorage.getItem(VIEW_KEY);
+}
+
+export function clearCurrentView(): void {
+    localStorage.removeItem(VIEW_KEY);
 }

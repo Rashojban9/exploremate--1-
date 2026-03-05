@@ -1,8 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { MapPin, Navigation, Plus, Clock, Gauge, ArrowLeft, GripVertical, X, MoreVertical, Settings } from 'lucide-react';
-import { Marker, Popup, Polyline } from 'react-leaflet';
+import L from 'leaflet';
+import { ArrowLeft, Clock, Fuel, Gauge, GripVertical, Hotel, MoreVertical, Navigation, Plus, Search, Settings, Utensils, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Marker, Polyline, Popup } from 'react-leaflet';
 import LeafletMap, { customIcon } from '../components/LeafletMap';
+import { formatDistance, formatDuration, getOptimizedRoute, type RoutePoint } from '../services/routingService';
+
+interface POI {
+  id: string;
+  name: string;
+  type: 'hotel' | 'restaurant' | 'petrol';
+  coords: [number, number];
+}
 
 interface Waypoint {
   id: number;
@@ -20,13 +29,36 @@ const MOCK_WAYPOINTS: Waypoint[] = [
 const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([
-      { id: 1, location: "Locating you...", coords: [27.7172, 85.3240] }, // Default temp placeholder
-      MOCK_WAYPOINTS[1]
+      { id: 1, location: "Locating you...", coords: [27.7172, 85.3240] },
+      { id: 2, location: "Searching destination...", coords: [27.7172, 85.3240] }
   ]);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isOptimized, setIsOptimized] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([27.7172, 85.3240]);
   
+  // Destination search state
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<{display_name: string; lat: string; lon: string}[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // POI state
+  const [pois, setPois] = useState<POI[]>([]);
+  const [showPois, setShowPois] = useState(true);
+  const [poiFilters, setPoiFilters] = useState({
+    hotel: true,
+    restaurant: true,
+    petrol: true
+  });
+  const [loadingPois, setLoadingPois] = useState(false);
+  
+  // Routing state
+  const [travelMode, setTravelMode] = useState<'driving' | 'cycling' | 'walking'>('driving');
+  const [routeGeometry, setRouteGeometry] = useState<[number, number][]>([]);
+  const [totalDistance, setTotalDistance] = useState<number>(0);
+  const [totalDuration, setTotalDuration] = useState<number>(0);
+  const [routingError, setRoutingError] = useState<string | null>(null);
+
   // Animation setup
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -64,7 +96,6 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                 let locationName = "My Current Location";
 
                 try {
-                    // Reverse geocode to get address name
                     const res = await fetch(
                         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
                         { headers: { 'Accept-Language': 'en' } }
@@ -81,7 +112,6 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                     }
                 } catch (error) {
                     console.error("Failed to fetch address name:", error);
-                    // Fallback using raw coords if name lookup fails
                     locationName = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
                 }
 
@@ -94,14 +124,18 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                     };
                     return newPoints;
                 });
+                
+                // Fetch POIs around user location
+                fetchPOIs(lat, lon);
             },
             (error) => {
                 console.warn("GPS access denied, using default location", error);
                 setWaypoints(prev => {
                     const newPoints = [...prev];
                     newPoints[0] = { 
-                        ...MOCK_WAYPOINTS[0],
-                        location: "Thamel (Default)" 
+                        id: 1,
+                        location: "Thamel (Default)",
+                        coords: [27.7154, 85.3123]
                     };
                     return newPoints;
                 });
@@ -111,32 +145,118 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
     }
   }, []);
 
+  // Fetch POIs from OpenStreetMap
+  const fetchPOIs = async (lat: number, lon: number) => {
+      setLoadingPois(true);
+      try {
+          const query = `
+              [out:json][timeout:25];
+              (
+                node["tourism"="hotel"](around:5000,${lat},${lon});
+                node["amenity"="restaurant"](around:5000,${lat},${lon});
+                node["amenity"="fast_food"](around:5000,${lat},${lon});
+                node["amenity"="fuel"](around:5000,${lat},${lon});
+              );
+              out body;
+          `;
+          
+          const response = await fetch('https://overpass-api.de/api/interpreter', {
+              method: 'POST',
+              body: query
+          });
+          
+          if (response.ok) {
+              const data = await response.json();
+              const fetchedPois: POI[] = data.elements.map((el: any) => {
+                  let type: 'hotel' | 'restaurant' | 'petrol' = 'hotel';
+                  if (el.tags.amenity === 'restaurant' || el.tags.amenity === 'fast_food') {
+                      type = 'restaurant';
+                  } else if (el.tags.amenity === 'fuel') {
+                      type = 'petrol';
+                  } else if (el.tags.tourism === 'hotel') {
+                      type = 'hotel';
+                  }
+                  
+                  return {
+                      id: `poi-${el.id}`,
+                      name: el.tags.name || `${type.charAt(0).toUpperCase() + type.slice(1)}`,
+                      type,
+                      coords: [el.lat, el.lon] as [number, number]
+                  };
+              });
+              
+              setPois(fetchedPois);
+          }
+      } catch (error) {
+          console.error('Failed to fetch POIs:', error);
+      } finally {
+          setLoadingPois(false);
+      }
+  };
+  
+  // Search for destination address
+  const handleDestinationSearch = async (query: string) => {
+      if (query.length < 3) {
+          setSearchResults([]);
+          return;
+      }
+      
+      setIsSearching(true);
+      try {
+          const response = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+              { headers: { 'Accept-Language': 'en' } }
+          );
+          
+          if (response.ok) {
+              const data = await response.json();
+              setSearchResults(data);
+              setShowSearchResults(true);
+          }
+      } catch (error) {
+          console.error('Search failed:', error);
+      } finally {
+          setIsSearching(false);
+      }
+  };
+  
+  // Select destination from search results
+  const selectDestination = (result: {display_name: string; lat: string; lon: string}) => {
+      const newWaypoints = [...waypoints];
+      newWaypoints[newWaypoints.length - 1] = {
+          id: Date.now(),
+          location: result.display_name.split(',')[0],
+          coords: [parseFloat(result.lat), parseFloat(result.lon)]
+      };
+      setWaypoints(newWaypoints);
+      setDestinationSearch(result.display_name.split(',')[0]);
+      setShowSearchResults(false);
+      setSearchResults([]);
+      setIsOptimized(false);
+  };
+
   const handleAddStop = () => {
     if (waypoints.length < 5) {
-       // Pick a random mock point that isn't already used (simple logic for demo)
-       const nextStop = MOCK_WAYPOINTS.find(mp => !waypoints.some(wp => wp.coords[0] === mp.coords[0])) || MOCK_WAYPOINTS[2];
-       
-       if (nextStop) {
-           const newWaypoints = [...waypoints];
-           // Insert before the last item (Destination) if we have more than 1, or append
-           const newId = Date.now(); // Unique ID
-           const stopToAdd = { ...nextStop, id: newId };
-
-           if(newWaypoints.length > 1) {
-             newWaypoints.splice(newWaypoints.length - 1, 0, stopToAdd);
-           } else {
-             newWaypoints.push(stopToAdd);
-           }
-           setWaypoints(newWaypoints);
+       setWaypoints(prev => {
+           const newPoints = [...prev];
+           const newId = Date.now();
+           // Add a middle point between start and end
+           const stopToAdd: Waypoint = { 
+               id: newId, 
+               location: `Stop ${newPoints.length - 1}`,
+               coords: [
+                   (newPoints[0].coords[0] + newPoints[newPoints.length - 1].coords[0]) / 2,
+                   (newPoints[0].coords[1] + newPoints[newPoints.length - 1].coords[1]) / 2
+               ] as [number, number]
+           };
            
-           // Animate new item
-           setTimeout(() => {
-               gsap.fromTo(`.waypoint-id-${newId}`,
-                   { height: 0, opacity: 0, marginBottom: 0 },
-                   { height: 'auto', opacity: 1, marginBottom: 16, duration: 0.4, ease: 'power2.out' }
-               );
-           }, 10);
-       }
+           if(newPoints.length > 1) {
+             newPoints.splice(newPoints.length - 1, 0, stopToAdd);
+           } else {
+             newPoints.push(stopToAdd);
+           }
+           return newPoints;
+       });
     }
   };
 
@@ -146,34 +266,69 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
       setIsOptimized(false);
   };
 
-  const handleOptimize = () => {
+  const handleOptimize = async () => {
+      if (waypoints.length < 2) return;
+      
       setIsOptimizing(true);
       setIsOptimized(false);
+      setRoutingError(null);
       
-      // Simulate API call
-      setTimeout(() => {
-          setIsOptimizing(false);
+      try {
+        const routePoints: RoutePoint[] = waypoints.map(wp => ({
+          lat: wp.coords[0],
+          lng: wp.coords[1]
+        }));
+
+        const response = await getOptimizedRoute(routePoints, travelMode);
+        
+        if (response && response.routes && response.routes.length > 0) {
+          const route = response.routes[0];
+          
+          const geometry: [number, number][] = route.geometry.coordinates.map(
+            (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
+          );
+          
+          setRouteGeometry(geometry);
+          setTotalDistance(route.distance);
+          setTotalDuration(route.duration);
+          
+          const reorderedWaypoints = [waypoints[0]];
+          if (waypoints.length > 2) {
+            for (let i = 1; i < waypoints.length - 1; i++) {
+              reorderedWaypoints.push(waypoints[i]);
+            }
+          }
+          reorderedWaypoints.push(waypoints[waypoints.length - 1]);
+          
+          setWaypoints(reorderedWaypoints);
+          
           setIsOptimized(true);
           
-          // Re-order animation simulation
-          const shuffled = [...waypoints];
-          // Keep start (0) and end (length-1), shuffle middle
-          if (shuffled.length > 2) {
-             const middle = shuffled.slice(1, shuffled.length - 1).reverse(); // Just reverse for demo "optimization"
-             const newOrder = [shuffled[0], ...middle, shuffled[shuffled.length - 1]];
-             setWaypoints(newOrder);
+          if (geometry.length > 0) {
+            const bounds: [number, number][] = geometry;
+            const centerLat = bounds.reduce((sum, b) => sum + b[0], 0) / bounds.length;
+            const centerLng = bounds.reduce((sum, b) => sum + b[1], 0) / bounds.length;
+            setMapCenter([centerLat, centerLng]);
           }
-
+          
           gsap.fromTo('.result-stats', 
-             { y: 20, opacity: 0 },
-             { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out' }
+            { y: 20, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out' }
           );
-      }, 2000);
+        } else {
+          setRoutingError('Could not find a route. Please try different waypoints.');
+        }
+      } catch (error) {
+        console.error('Route optimization failed:', error);
+        setRoutingError('Failed to optimize route. Please try again.');
+      } finally {
+        setIsOptimizing(false);
+      }
   };
 
   return (
     <div ref={containerRef} className="w-full h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden">
-      
+       
       {/* Sidebar Controls */}
       <div className="route-sidebar w-full md:w-[450px] bg-white h-full flex flex-col shadow-2xl z-20 relative">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
@@ -208,7 +363,6 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                                       readOnly
                                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium text-sm focus:outline-none focus:border-sky-400 focus:bg-white transition-all pl-10"
                                   />
-                                  <MapPin size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${index === 0 ? 'text-emerald-500' : (index === waypoints.length - 1 ? 'text-red-500' : 'text-sky-500')}`} />
                               </div>
                           </div>
 
@@ -221,7 +375,6 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                               </button>
                           )}
                           
-                          {/* Connector Line */}
                           {index < waypoints.length - 1 && (
                               <div className="absolute left-[9px] top-12 bottom-[-16px] w-0.5 bg-slate-200 -z-10 group-last:hidden"></div>
                           )}
@@ -252,15 +405,21 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                               <div className="flex items-center gap-2 text-slate-400 mb-1">
                                   <Clock size={14} /> <span className="text-[10px] font-bold uppercase">Total Time</span>
                               </div>
-                              <div className="text-lg font-bold text-slate-800">2h 15m</div>
+                              <div className="text-lg font-bold text-slate-800">{formatDuration(totalDuration)}</div>
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-sky-100 shadow-sm">
                               <div className="flex items-center gap-2 text-slate-400 mb-1">
                                   <Gauge size={14} /> <span className="text-[10px] font-bold uppercase">Distance</span>
                               </div>
-                              <div className="text-lg font-bold text-slate-800">12.4 km</div>
+                              <div className="text-lg font-bold text-slate-800">{formatDistance(totalDistance)}</div>
                           </div>
                       </div>
+                  </div>
+              )}
+
+              {routingError && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                      <p className="text-sm text-red-600 font-medium">{routingError}</p>
                   </div>
               )}
           </div>
@@ -290,23 +449,85 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
       {/* Map View */}
       <div className="route-map flex-grow h-[50vh] md:h-full relative bg-slate-100">
           <LeafletMap className="w-full h-full z-0" center={mapCenter} zoom={13}>
+               {/* POI Markers */}
+               {showPois && pois.filter(p => poiFilters[p.type]).map((poi) => (
+                   <Marker 
+                       key={poi.id} 
+                       position={poi.coords}
+                       icon={poi.type === 'hotel' ? hotelIcon : poi.type === 'restaurant' ? restaurantIcon : petrolIcon}
+                   >
+                       <Popup>
+                           <div className="text-center font-sans min-w-[120px]">
+                               <p className="font-bold text-slate-800">{poi.name}</p>
+                               <p className="text-xs text-slate-500 capitalize">{poi.type}</p>
+                           </div>
+                       </Popup>
+                   </Marker>
+               ))}
+               
+               {/* Waypoint Markers */}
                {waypoints.map((point, i) => (
                    <Marker key={point.id} position={point.coords} icon={customIcon}>
                       <Popup>
                           <div className="text-center font-sans">
-                              <strong className="text-sky-600">{i === 0 ? "Start: " : ""}{point.location}</strong>
+                              <strong className="text-sky-600">{i === 0 ? "Start: " : i === waypoints.length - 1 ? "Destination: " : `Stop ${i}: `}{point.location}</strong>
                           </div>
                       </Popup>
                    </Marker>
                ))}
                
-               {isOptimized && (
+               {isOptimized && routeGeometry.length > 0 && (
                    <Polyline 
-                      positions={waypoints.map(p => p.coords)}
-                      pathOptions={{ color: '#0284c7', weight: 4, opacity: 0.7, dashArray: '10, 10', lineCap: 'round' }} 
+                      positions={routeGeometry}
+                      pathOptions={{ color: '#0284c7', weight: 5, opacity: 0.9, lineCap: 'round' }} 
                    />
                )}
           </LeafletMap>
+
+          {/* POI Filter Controls */}
+          <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md p-2 rounded-xl border border-white/50 shadow-lg z-[400] flex flex-col gap-1">
+              <button 
+                  onClick={() => setShowPois(!showPois)}
+                  className={`p-2 rounded-lg transition-colors ${showPois ? 'bg-sky-100 text-sky-600' : 'text-slate-400 hover:bg-slate-100'}`}
+                  title="Toggle POIs"
+              >
+                  <Search size={18} />
+              </button>
+              
+              {showPois && (
+                  <>
+                      <button 
+                          onClick={() => setPoiFilters(f => ({...f, hotel: !f.hotel}))}
+                          className={`p-2 rounded-lg transition-colors ${poiFilters.hotel ? 'bg-amber-100 text-amber-600' : 'text-slate-300'}`}
+                          title="Hotels"
+                      >
+                          <Hotel size={18} />
+                      </button>
+                      <button 
+                          onClick={() => setPoiFilters(f => ({...f, restaurant: !f.restaurant}))}
+                          className={`p-2 rounded-lg transition-colors ${poiFilters.restaurant ? 'bg-orange-100 text-orange-600' : 'text-slate-300'}`}
+                          title="Restaurants"
+                      >
+                          <Utensils size={18} />
+                      </button>
+                      <button 
+                          onClick={() => setPoiFilters(f => ({...f, petrol: !f.petrol}))}
+                          className={`p-2 rounded-lg transition-colors ${poiFilters.petrol ? 'bg-green-100 text-green-600' : 'text-slate-300'}`}
+                          title="Petrol Pumps"
+                      >
+                          <Fuel size={18} />
+                      </button>
+                  </>
+              )}
+          </div>
+
+          {/* Loading POIs indicator */}
+          {loadingPois && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-white/50 shadow-lg z-[400] flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-sky-400/30 border-t-sky-600 rounded-full animate-spin"></div>
+                  <span className="text-xs font-medium text-slate-600">Loading places...</span>
+              </div>
+          )}
 
           {/* Map Controls Overlay */}
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-2 rounded-xl border border-white/50 shadow-lg z-[400] flex flex-col gap-2">
@@ -322,11 +543,33 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
   );
 };
 
-// Simple check icon component for local use
 const Check = ({ size, className }: { size: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
 );
+
+// Custom POI Icons
+const hotelIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f59e0b" width="32" height="32"><path d="M19 9.5V5a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v4.5a1 1 0 0 0 .5.866l5 3a1 1 0 0 0 1 0l5-3A1 1 0 0 0 19 9.5zM5 18a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm14-1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`),
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+});
+
+const restaurantIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f97316" width="32" height="32"><path d="M12 2C8.5 2 6 4.5 6 7.5c0 1.5.5 2.8 1.3 3.8L6 18h12l-1.3-6.7C17.5 10.3 18 9 18 7.5 18 4.5 15.5 2 12 2zM8 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`),
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+});
+
+const petrolIcon = new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#22c55e" width="32" height="32"><path d="M19 5h-2V3H7v2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-6H8V8h6v4z"/></svg>`),
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+});
+
 
 export default RouteOptimizerPage;

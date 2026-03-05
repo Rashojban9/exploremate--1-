@@ -28,7 +28,7 @@ import GalleryPage from './pages/GalleryPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
-import { clearSession, getStoredSession } from './services/storageService';
+import { clearSession, getStoredSession, saveCurrentView, getCurrentView, clearCurrentView } from './services/storageService';
 import { getCurrentUser, login as authLogin, type AuthResponse } from './services/authService';
 
 type ViewState = 'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'about' | 'faq' | 'news' | 'features' | 'saved' | 'trips' | 'profile' | 'notifications' | 'route-optimizer' | 'translator' | 'qr-guide' | 'group-plan' | 'ai-suggestion' | 'admin' | 'blog' | 'pricing' | 'contact' | 'testimonials' | 'gallery' | 'help' | 'terms' | 'privacy';
@@ -181,6 +181,11 @@ export default function App() {
             setIsLoggedIn(true);
             setUserRole(storedSession.user.role);
             setUserName(storedSession.user.name || 'Explorer');
+            // Restore the saved view if user is logged in
+            const savedView = getCurrentView();
+            if (savedView && savedView !== 'landing') {
+              setView(savedView as ViewState);
+            }
           }
           return;
         }
@@ -191,6 +196,11 @@ export default function App() {
         setIsLoggedIn(true);
         setUserRole(currentUser.role);
         setUserName(currentUser.name || 'Explorer');
+        // Restore the saved view if user is logged in
+        const savedView = getCurrentView();
+        if (savedView && savedView !== 'landing') {
+          setView(savedView as ViewState);
+        }
       } catch {
         if (!isActive) {
           return;
@@ -228,21 +238,29 @@ export default function App() {
     }
   }, [view, isAdmin, isLoggedIn]);
 
-  const handleNavigate = (page: string) => setView(page as any);
+  const handleNavigate = (page: string) => {
+    setView(page as ViewState);
+    // Save the current view to localStorage for page persistence
+    saveCurrentView(page);
+  };
+  
   const handleLogin = (auth: AuthResponse) => {
     setIsLoggedIn(true);
     setUserRole(auth.role);
     setUserName(auth.name || 'Explorer');
     setView('dashboard');
+    saveCurrentView('dashboard');
   };
   const handleSignup = (auth: AuthResponse) => {
     setIsLoggedIn(true);
     setUserRole(auth.role);
     setUserName(auth.name || 'Explorer');
     setView('dashboard');
+    saveCurrentView('dashboard');
   };
   const handleLogout = () => {
     clearSession();
+    clearCurrentView();
     setIsLoggedIn(false);
     setUserRole(null);
     setUserName('');

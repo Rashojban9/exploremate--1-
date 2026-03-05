@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Trash2, ChevronRight, Loader } from 'lucide-react';
-import { getConversations, getSessionId, clearChatHistory, getChatHistory } from '../services/aiService';
+import { Loader, MessageSquare, Plus, Trash2, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { clearChatHistory, getConversations } from '../services/aiService';
 
 interface Conversation {
   sessionId: string;
@@ -73,13 +73,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     <div className={`fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:translate-x-0 lg:w-64 lg:h-full`}>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="p-4 border-b border-slate-800">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <button
             onClick={onNewChat}
-            className="w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white py-3 px-4 rounded-xl font-medium transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white py-3 px-4 rounded-xl font-medium transition-colors"
           >
             <Plus className="w-5 h-5" />
             New Chat
+          </button>
+          {/* Close button - mobile only */}
+          <button
+            onClick={onClose}
+            className="lg:hidden ml-2 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
