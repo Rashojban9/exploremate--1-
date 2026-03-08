@@ -1,12 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
-import { ArrowLeft, Mail, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Mail } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { InputField } from '../components/SharedUI';
+import { forgotPassword } from '../services/authService';
 
 const ForgotPasswordPage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [error, setError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,15 +19,19 @@ const ForgotPasswordPage = ({ onNavigate }: { onNavigate: (page: string) => void
     );
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!email) return;
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    setError('');
+    try {
+      await forgotPassword(email);
       setIsSent(true);
-    }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset link');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

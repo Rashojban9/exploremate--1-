@@ -1,10 +1,38 @@
 import { gsap } from 'gsap';
 import L from 'leaflet';
-import { ArrowLeft, Clock, Fuel, Gauge, GripVertical, Hotel, MoreVertical, Navigation, Plus, Search, Settings, Utensils, X } from 'lucide-react';
+import {
+    ArrowLeft,
+    ChevronDown,
+    ChevronUp,
+    Clock,
+    Cloud,
+    Fuel,
+    Gauge,
+    GripVertical,
+    Hotel,
+    Navigation,
+    Plus,
+    RefreshCcw,
+    Save,
+    Search,
+    Settings,
+    Utensils,
+    X
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Marker, Polyline, Popup } from 'react-leaflet';
 import LeafletMap, { customIcon } from '../components/LeafletMap';
-import { formatDistance, formatDuration, getOptimizedRoute, type RoutePoint } from '../services/routingService';
+import {
+    formatDistance,
+    formatDuration,
+    getNavigationInstructions,
+    getOptimizedRoute,
+    type MapboxRoute,
+    type RoutePoint,
+    type RouteStep,
+    type WeatherData
+} from '../services/routingService';
+import { createTrip, type TripRequest } from '../services/tripService';
 
 interface POI {
   id: string;
@@ -58,6 +86,18 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
   const [totalDistance, setTotalDistance] = useState<number>(0);
   const [totalDuration, setTotalDuration] = useState<number>(0);
   const [routingError, setRoutingError] = useState<string | null>(null);
+
+  // New features state
+  const [alternativeRoutes, setAlternativeRoutes] = useState<MapboxRoute[]>([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState<number>(0);
+  const [showAlternatives, setShowAlternatives] = useState<boolean>(false);
+  const [navigationSteps, setNavigationSteps] = useState<RouteStep[]>([]);
+  const [showNavigation, setShowNavigation] = useState<boolean>(false);
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
+  const [showWeather, setShowWeather] = useState<boolean>(false);
+  const [isSavingTrip, setIsSavingTrip] = useState<boolean>(false);
+  const [tripSaved, setTripSaved] = useState<boolean>(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Animation setup
   useEffect(() => {
@@ -326,6 +366,72 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
       }
   };
 
+  // Save route to trips
+  const handleSaveToTrip = async () => {
+    if (!isOptimized || waypoints.length < 2) return;
+    
+    setIsSavingTrip(true);
+    setTripSaved(false);
+    
+    try {
+      const tripName = `Trip to ${waypoints[waypoints.length - 1].location}`;
+      const tripDescription = `Route with ${waypoints.length} stops. Total distance: ${formatDistance(totalDistance)}, Duration: ${formatDuration(totalDuration)}`;
+      
+      const tripData: TripRequest = {
+        tripName,
+        tripDescription,
+        placeName: waypoints[waypoints.length - 1].location,
+        placeDescription: tripDescription,
+        status: 'planned'
+      };
+      
+      await createTrip(tripData);
+      setTripSaved(true);
+      
+      // Reset after 3 seconds
+      setTimeout(() => setTripSaved(false), 3000);
+    } catch (error) {
+      console.error('Failed to save trip:', error);
+      setRoutingError('Failed to save trip. Please try again.');
+    } finally {
+      setIsSavingTrip(false);
+    }
+  };
+
+  // Reorder waypoints (move up/down)
+  const moveWaypoint = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index <= 1) return; // Can't move start point up or middle points up past position 1
+    if (direction === 'down' && index >= waypoints.length - 2) return; // Can't move end point down
+    
+    const newWaypoints = [...waypoints];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap waypoints
+    [newWaypoints[index], newWaypoints[newIndex]] = [newWaypoints[newIndex], newWaypoints[index]];
+    
+    setWaypoints(newWaypoints);
+    setIsOptimized(false);
+  };
+
+  // Select alternative route
+  const selectAlternativeRoute = (index: number) => {
+    if (!alternativeRoutes[index]) return;
+    
+    const route = alternativeRoutes[index];
+    const geometry: [number, number][] = route.geometry.coordinates.map(
+      (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
+    );
+    
+    setRouteGeometry(geometry);
+    setTotalDistance(route.distance);
+    setTotalDuration(route.duration);
+    setSelectedRouteIndex(index + 1); // +1 because index 0 is the main route
+    
+    // Update navigation steps for the selected route
+    const steps = getNavigationInstructions(route);
+    setNavigationSteps(steps);
+  };
+
   return (
     <div ref={containerRef} className="w-full h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden">
        
@@ -348,8 +454,23 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
               <div className="space-y-4 mb-8">
                   {waypoints.map((point, index) => (
                       <div key={point.id} className={`waypoint-item waypoint-id-${point.id} group relative flex items-center gap-3`}>
-                          <div className="text-slate-300 cursor-move hover:text-slate-500">
-                              <GripVertical size={20} />
+                          <div className="flex flex-col gap-1">
+                              <button 
+                                  onClick={() => moveWaypoint(index, 'up')}
+                                  disabled={index <= 1}
+                                  className={`p-1 rounded hover:bg-slate-100 ${index <= 1 ? 'text-slate-200' : 'text-slate-400 hover:text-sky-500'}`}
+                                  title="Move up"
+                              >
+                                  <ChevronUp size={16} />
+                              </button>
+                              <button 
+                                  onClick={() => moveWaypoint(index, 'down')}
+                                  disabled={index >= waypoints.length - 2}
+                                  className={`p-1 rounded hover:bg-slate-100 ${index >= waypoints.length - 2 ? 'text-slate-200' : 'text-slate-400 hover:text-sky-500'}`}
+                                  title="Move down"
+                              >
+                                  <ChevronDown size={16} />
+                              </button>
                           </div>
                           
                           <div className="flex-grow">
@@ -395,7 +516,9 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                   <div className="result-stats bg-sky-50 rounded-2xl p-5 border border-sky-100 mb-6">
                       <div className="flex items-center gap-2 mb-4">
                           <div className="p-1.5 bg-emerald-500 rounded-full">
-                              <Check size={12} className="text-white" />
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
                           </div>
                           <span className="text-sm font-bold text-sky-800">Route Optimized Successfully</span>
                       </div>
@@ -414,6 +537,85 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                               <div className="text-lg font-bold text-slate-800">{formatDistance(totalDistance)}</div>
                           </div>
                       </div>
+
+                      {/* Weather Info */}
+                      {weatherData.length > 0 && (
+                        <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Cloud size={14} className="text-blue-500" />
+                                <span className="text-xs font-bold text-blue-700 uppercase">Weather Along Route</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {weatherData.slice(0, 3).map((weather, i) => (
+                                    <div key={i} className="bg-white px-2 py-1 rounded-lg text-xs">
+                                        <span className="font-medium">{Math.round(weather.temperature)}°C</span>
+                                        <span className="text-slate-500 ml-1">{weather.description}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                      )}
+
+                      {/* Alternative Routes */}
+                      {alternativeRoutes.length > 0 && (
+                        <div className="mt-4">
+                            <button 
+                                onClick={() => setShowAlternatives(!showAlternatives)}
+                                className="flex items-center gap-2 text-sm text-sky-600 hover:text-sky-700 font-medium"
+                            >
+                                <RefreshCcw size={14} />
+                                {alternativeRoutes.length} Alternative Route{alternativeRoutes.length > 1 ? 's' : ''}
+                                {showAlternatives ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                            {showAlternatives && (
+                                <div className="mt-2 space-y-2">
+                                    {alternativeRoutes.map((route, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => selectAlternativeRoute(i)}
+                                            className={`w-full p-3 rounded-xl border text-left transition-all ${
+                                                selectedRouteIndex === i + 1 
+                                                    ? 'bg-sky-100 border-sky-300' 
+                                                    : 'bg-white border-slate-200 hover:border-sky-300'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-medium text-slate-700">Alternative {i + 1}</span>
+                                                <span className="text-sm text-slate-500">
+                                                    {formatDuration(route.duration)} • {formatDistance(route.distance)}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                      )}
+
+                      {/* Navigation Instructions Toggle */}
+                      {navigationSteps.length > 0 && (
+                        <div className="mt-4">
+                            <button 
+                                onClick={() => setShowNavigation(!showNavigation)}
+                                className="flex items-center gap-2 text-sm text-sky-600 hover:text-sky-700 font-medium"
+                            >
+                                <Navigation size={14} />
+                                Turn-by-Turn Directions
+                                {showNavigation ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                            {showNavigation && (
+                                <div className="mt-2 max-h-48 overflow-y-auto space-y-2">
+                                    {navigationSteps.slice(0, 10).map((step, i) => (
+                                        <div key={i} className="flex gap-2 text-sm p-2 bg-white rounded-lg">
+                                            <span className="text-slate-400 font-medium">{i + 1}.</span>
+                                            <span className="text-slate-600">{step.instruction}</span>
+                                            <span className="text-slate-400 ml-auto">{formatDistance(step.distance)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                      )}
                   </div>
               )}
 
@@ -443,6 +645,39 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                       </>
                   )}
               </button>
+              
+              {/* Save to Trip Button */}
+              {isOptimized && (
+                  <button 
+                      onClick={handleSaveToTrip}
+                      disabled={isSavingTrip}
+                      className={`mt-3 w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                          isSavingTrip 
+                              ? 'bg-slate-200 text-slate-400 cursor-wait' 
+                              : tripSaved 
+                                  ? 'bg-emerald-500 text-white' 
+                                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      }`}
+                  >
+                      {isSavingTrip ? (
+                          <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                              Saving...
+                          </>
+                      ) : tripSaved ? (
+                          <>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                              Saved to Trips!
+                          </>
+                      ) : (
+                          <>
+                              <Save size={20} /> Save to Trips
+                          </>
+                      )}
+                  </button>
+              )}
           </div>
       </div>
 
@@ -535,7 +770,7 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
                   <Plus size={20} />
               </button>
               <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="Settings">
-                   <MoreVertical size={20} />
+                   <Settings size={20} />
               </button>
           </div>
       </div>

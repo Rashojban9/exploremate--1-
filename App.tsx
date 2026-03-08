@@ -8,6 +8,7 @@ import FAQPage from './pages/FAQPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import FeaturesPage from './pages/FeaturesPage';
 import SavedPage from './pages/SavedPage';
@@ -31,7 +32,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import { clearSession, getStoredSession, saveCurrentView, getCurrentView, clearCurrentView } from './services/storageService';
 import { getCurrentUser, login as authLogin, type AuthResponse } from './services/authService';
 
-type ViewState = 'landing' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'about' | 'faq' | 'news' | 'features' | 'saved' | 'trips' | 'profile' | 'notifications' | 'route-optimizer' | 'translator' | 'qr-guide' | 'group-plan' | 'ai-suggestion' | 'admin' | 'blog' | 'pricing' | 'contact' | 'testimonials' | 'gallery' | 'help' | 'terms' | 'privacy';
+type ViewState = 'landing' | 'login' | 'signup' | 'forgot-password' | 'reset-password' | 'dashboard' | 'about' | 'faq' | 'news' | 'features' | 'saved' | 'trips' | 'profile' | 'notifications' | 'route-optimizer' | 'translator' | 'qr-guide' | 'group-plan' | 'ai-suggestion' | 'admin' | 'blog' | 'pricing' | 'contact' | 'testimonials' | 'gallery' | 'help' | 'terms' | 'privacy';
 
 const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -161,6 +162,15 @@ export default function App() {
   const [userName, setUserName] = useState<string>('');
   const isAdmin = userRole?.toUpperCase() === 'ADMIN';
 
+  // Check for reset password token in URL on initial load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      setView('reset-password');
+    }
+  }, []);
+
   useEffect(() => {
     let isActive = true;
 
@@ -273,6 +283,7 @@ export default function App() {
       case 'login': return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
       case 'signup': return <SignupPage onSignup={handleSignup} onNavigate={handleNavigate} />;
       case 'forgot-password': return <ForgotPasswordPage onNavigate={handleNavigate} />;
+      case 'reset-password': return <ResetPasswordPage onNavigate={handleNavigate} />;
       case 'dashboard': return <DashboardPage onLogout={handleLogout} onNavigate={handleNavigate} userName={userName} />;
       case 'saved': return <SavedPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
       case 'trips': return <TripsPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;

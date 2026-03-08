@@ -158,3 +158,13 @@ export async function updateProfile(payload: ProfileUpdatePayload): Promise<Prof
 export function logout(): void {
     clearSession();
 }
+
+/** Request password reset email */
+export async function forgotPassword(email: string): Promise<void> {
+    await post<any>('/api/auth/forgot-password', { email });
+}
+
+/** Reset password with token */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+    await post<any>('/api/auth/reset-password', { token, newPassword });
+}
