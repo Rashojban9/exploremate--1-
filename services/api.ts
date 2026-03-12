@@ -66,6 +66,15 @@ export {
   type ChatMessage,
 } from './aiService';
 
+// ─── Translation ──────────────────────────────────────────────────────────────
+export {
+  translateText,
+  SUPPORTED_LANGUAGES,
+  type TranslateResponse,
+  type Language,
+} from './translationService';
+
+
 // ─── Notification ─────────────────────────────────────────────────────────────
 export { createNotification, notify } from './notificationService';
 
