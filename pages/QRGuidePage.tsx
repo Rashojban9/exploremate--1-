@@ -1,39 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { ArrowLeft, Flashlight, Image as ImageIcon, MoreVertical, X, MapPin, Headphones, Box, History, Share2, Info, ChevronUp, ScanLine } from 'lucide-react';
-
-interface ScannedResult {
-  id: string;
-  title: string;
-  location: string;
-  description: string;
-  image: string;
-  audioDuration: string;
-  year: string;
-  tags: string[];
-}
-
-const MOCK_RESULTS: Record<string, ScannedResult> = {
-  'default': {
-    id: '1',
-    title: 'Krishna Mandir',
-    location: 'Patan Durbar Square, Lalitpur',
-    description: 'Built in 1637 AD by King Siddhi Narsingh Malla, this Shikhara-style temple is dedicated to Lord Krishna. It is carved entirely out of stone and features 21 golden pinnacles.',
-    image: 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?auto=format&fit=crop&q=80&w=800',
-    audioDuration: '3:45',
-    year: '1637 AD',
-    tags: ['Architecture', 'Religious', 'UNESCO']
-  }
-};
+import { ArrowLeft, Flashlight, Image as ImageIcon, MoreVertical, X, MapPin, Headphones, Box, History as HistoryIcon, Share2, ScanLine } from 'lucide-react';
+import { qrGuideService, QrArtifact, ScanHistory } from '../services/api';
 
 const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanning, setScanning] = useState(true);
-  const [result, setResult] = useState<ScannedResult | null>(null);
+  const [result, setResult] = useState<QrArtifact | null>(null);
   const [torchOn, setTorchOn] = useState(false);
+  
   const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<ScanHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  
+  const [isScanningActive, setIsScanningActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize Camera
   useEffect(() => {
@@ -65,6 +48,7 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
 
   // Scanning Animation
   useEffect(() => {
+    if (!scanning) return;
     const ctx = gsap.context(() => {
       // Laser Scan Line
       gsap.to('.scan-line', {
@@ -94,25 +78,64 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
     }, containerRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [scanning]);
 
-  // Handle Scan Simulation
-  const handleSimulateScan = () => {
-    if (!scanning) return;
+  // Load History
+  const loadHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const data = await qrGuideService.getUserHistory();
+      setHistory(data);
+    } catch (err) {
+      console.error('Failed to load history', err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+     if (showHistory) {
+         loadHistory();
+     }
+  }, [showHistory]);
+
+  // Handle Scan Simulation (With real backend call)
+  const handleSimulateScan = async () => {
+    if (!scanning || isScanningActive) return;
+    setIsScanningActive(true);
+    setError(null);
     
     // Animate successful scan
     gsap.to('.scan-frame', { scale: 1.1, borderColor: '#4ade80', duration: 0.2, yoyo: true, repeat: 1 });
     
-    setTimeout(() => {
+    try {
+        // We simulate scanning the QR code with ID "artifact-1"
+        // In a real device, this string comes from the QR decoder library
+        const artificialId = "artifact-1"; 
+        
+        // 1. Fetch artifact details
+        const artifactData = await qrGuideService.getArtifact(artificialId);
+        
+        // 2. Record this scan silently
+        await qrGuideService.recordScan(artificialId).catch(e => console.error("History tracking failed", e));
+        
         setScanning(false);
-        setResult(MOCK_RESULTS['default']);
+        setResult(artifactData);
         
         // Result Sheet Slide Up
-        gsap.fromTo('.result-sheet', 
-            { y: '100%' },
-            { y: '0%', duration: 0.5, ease: 'power3.out' }
-        );
-    }, 800);
+        setTimeout(() => {
+            gsap.fromTo('.result-sheet', 
+                { y: '100%' },
+                { y: '0%', duration: 0.5, ease: 'power3.out' }
+            );
+        }, 100);
+        
+    } catch (err: any) {
+        console.error(err);
+        setError("Failed to identify artifact. Make sure an artifact with ID 'artifact-1' is seeded in the database.");
+    } finally {
+        setIsScanningActive(false);
+    }
   };
 
   const resetScan = () => {
@@ -123,6 +146,7 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
           onComplete: () => {
               setResult(null);
               setScanning(true);
+              setError(null);
           }
       });
   };
@@ -149,17 +173,19 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
                 <p className="text-slate-400 text-sm mb-6">We need camera access to scan QR codes at heritage sites.</p>
                 <button 
                     onClick={handleSimulateScan}
-                    className="px-6 py-3 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-700 transition-colors"
+                    disabled={isScanningActive}
+                    className="px-6 py-3 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-700 transition-colors disabled:opacity-50"
                 >
-                    Simulate Scan
+                    {isScanningActive ? 'Scanning...' : 'Simulate Scan'}
                 </button>
+                {error && <p className="text-red-400 mt-4 text-sm">{error}</p>}
             </div>
         )}
       </div>
 
       {/* 2. Scanning Overlay */}
       {scanning && (
-          <div className="absolute inset-0 z-10 flex flex-col">
+          <div className="absolute inset-0 z-10 flex flex-col w-full h-full">
               {/* Header */}
               <div className="p-4 flex items-center justify-between overlay-ui bg-gradient-to-b from-black/60 to-transparent pt-12 md:pt-6">
                   <button onClick={() => onNavigate('dashboard')} className="p-2 rounded-full bg-black/20 text-white backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors">
@@ -218,7 +244,7 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
 
                   <button className="flex flex-col items-center gap-2 group" onClick={() => setShowHistory(true)}>
                       <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-all">
-                          <History size={20} className="text-white" />
+                          <HistoryIcon size={20} className="text-white" />
                       </div>
                       <span className="text-white text-xs font-medium">Recent</span>
                   </button>
@@ -259,7 +285,7 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
                       <div className="grid grid-cols-3 gap-3 mb-6">
                           <button className="flex flex-col items-center justify-center gap-2 p-3 bg-sky-50 rounded-2xl text-sky-700 hover:bg-sky-100 transition-colors">
                               <Headphones size={24} />
-                              <span className="text-xs font-bold">Audio Guide</span>
+                              <span className="text-xs font-bold">{result.audioDuration || 'Audio'}</span>
                           </button>
                           <button className="flex flex-col items-center justify-center gap-2 p-3 bg-purple-50 rounded-2xl text-purple-700 hover:bg-purple-100 transition-colors">
                               <Box size={24} />
@@ -272,11 +298,11 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
                       </div>
 
                       {/* Quick Facts */}
-                      <div className="flex gap-2 mb-6">
+                      <div className="flex gap-2 mb-6 flex-wrap">
                           <span className="px-3 py-1 border border-slate-200 rounded-full text-xs font-bold text-slate-600 flex items-center gap-1">
-                              <History size={12} /> {result.year}
+                              <HistoryIcon size={12} /> {result.year}
                           </span>
-                          {result.tags.map(tag => (
+                          {result.tags?.map((tag: string) => (
                               <span key={tag} className="px-3 py-1 border border-slate-200 rounded-full text-xs font-bold text-slate-600">
                                   {tag}
                               </span>
@@ -286,28 +312,9 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
                       {/* Description */}
                       <div className="mb-8">
                           <h3 className="font-bold text-slate-900 mb-2">History & Significance</h3>
-                          <p className="text-slate-600 text-sm leading-relaxed">
+                          <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
                               {result.description}
                           </p>
-                      </div>
-
-                      {/* Nearby */}
-                      <div>
-                          <div className="flex items-center justify-between mb-4">
-                              <h3 className="font-bold text-slate-900">Nearby Artifacts</h3>
-                              <button className="text-xs text-sky-600 font-bold">View Map</button>
-                          </div>
-                          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                              {[1,2,3].map(i => (
-                                  <div key={i} className="w-32 shrink-0">
-                                      <div className="h-24 bg-slate-100 rounded-xl mb-2 overflow-hidden">
-                                          <img src={`https://images.unsplash.com/photo-1596525712437-080c950294da?auto=format&fit=crop&q=80&w=200`} className="w-full h-full object-cover" alt="Nearby" />
-                                      </div>
-                                      <div className="text-xs font-bold text-slate-800 truncate">Golden Temple</div>
-                                      <div className="text-[10px] text-slate-500">5 mins walk</div>
-                                  </div>
-                              ))}
-                          </div>
                       </div>
                   </div>
               </div>
@@ -324,21 +331,33 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
                           <X size={20} />
                       </button>
                   </div>
-                  <div className="flex-grow overflow-y-auto space-y-4">
-                      <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                          <div className="w-16 h-16 bg-slate-200 rounded-xl overflow-hidden shrink-0">
-                              <img src={MOCK_RESULTS['default'].image} alt="Thumb" className="w-full h-full object-cover" />
-                          </div>
-                          <div>
-                              <h4 className="font-bold text-slate-900 text-sm">{MOCK_RESULTS['default'].title}</h4>
-                              <p className="text-xs text-slate-500">{MOCK_RESULTS['default'].location}</p>
-                              <p className="text-[10px] text-sky-600 font-bold mt-1">Scanned Today, 10:30 AM</p>
-                          </div>
+                  
+                  {isLoadingHistory ? (
+                      <div className="flex-grow flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
                       </div>
-                      <div className="text-center text-slate-400 text-sm mt-8">
-                          No more recent scans.
+                  ) : history.length === 0 ? (
+                      <div className="text-center text-slate-400 text-sm mt-8 flex-grow">
+                          No history found. Start scanning QR codes at heritage sites!
                       </div>
-                  </div>
+                  ) : (
+                      <div className="flex-grow overflow-y-auto space-y-4 pr-2">
+                          {history.map((record) => (
+                              <div key={record.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:border-sky-200 transition-colors cursor-pointer" onClick={() => { setShowHistory(false); setResult(record.artifact); setScanning(false); setTimeout(() => { gsap.fromTo('.result-sheet', { y: '100%' }, { y: '0%', duration: 0.5, ease: 'power3.out' }); }, 100); }}>
+                                  <div className="w-16 h-16 bg-slate-200 rounded-xl overflow-hidden shrink-0">
+                                      <img src={record.artifact.image} alt="Thumb" className="w-full h-full object-cover" />
+                                  </div>
+                                  <div>
+                                      <h4 className="font-bold text-slate-900 text-sm">{record.artifact.title}</h4>
+                                      <p className="text-xs text-slate-500">{record.artifact.location}</p>
+                                      <p className="text-[10px] text-sky-600 font-bold mt-1">
+                                          {new Date(record.scannedAt).toLocaleDateString()} at {new Date(record.scannedAt).toLocaleTimeString()}
+                                      </p>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  )}
               </div>
           </div>
       )}

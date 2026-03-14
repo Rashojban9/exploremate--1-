@@ -1,30 +1,27 @@
-/**
- * notificationService.ts — Client-side notification helpers
- *
- * No backend. Creates typed notification payloads for use
- * with AppContext's notify() function.
- */
+import { get, put, del } from './http';
 
-import type { Notification } from '../context/AppContext';
-
-export type NotificationType = Notification['type'];
-
-/** Build a notification payload (pass to context `notify()`) */
-export function createNotification(
-    type: NotificationType,
-    message: string,
-    duration = 5000,
-): Omit<Notification, 'id'> {
-    return { type, message, duration };
+export interface Notification {
+  id: string;
+  userEmail: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+  read: boolean;
+  createdAt: string;
 }
 
-export const notify = {
-    success: (message: string, duration?: number) =>
-        createNotification('success', message, duration),
-    error: (message: string, duration?: number) =>
-        createNotification('error', message, duration ?? 8000),
-    warning: (message: string, duration?: number) =>
-        createNotification('warning', message, duration),
-    info: (message: string, duration?: number) =>
-        createNotification('info', message, duration),
+const BASE_URL = '/api/notifications';
+
+export const getNotifications = () => get<Notification[]>(BASE_URL);
+
+export const markAsRead = (id: string) => put(`${BASE_URL}/${id}/read`, {});
+
+export const deleteNotification = (id: string) => del(`${BASE_URL}/${id}`);
+
+export const clearAllNotifications = () => del(BASE_URL);
+
+// WebSocket URL helper
+export const getNotificationWebSocketUrl = () => {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host; // Through Gateway
+  return `${protocol}//${host}/ws/notifications`;
 };

@@ -47,7 +47,10 @@ async function request<T>(
 
   if (!response.ok) {
     if (response.status === 401) {
-      clearSession();
+      // Only clear session for core auth failures, not downstream provider errors (like AI keys)
+      if (path.includes('/auth/') || path.includes('/trips') || path.includes('/saved')) {
+        clearSession();
+      }
     }
 
     let message = 'Request failed';

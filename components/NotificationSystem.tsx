@@ -105,39 +105,48 @@ export const NotificationContainer = () => {
 
 // Notification bell with badge
 export const NotificationBell = ({ 
-  count = 0,
   onClick 
 }: { 
-  count?: number;
   onClick?: () => void;
 }) => {
+  const { state } = useApp();
+  const unreadCount = state.ui.notifications.filter(n => !n.read).length;
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
-    if (count > 0) {
+    if (unreadCount > 0) {
       setIsAnimating(true);
       const timer = setTimeout(() => setIsAnimating(false), 500);
       return () => clearTimeout(timer);
     }
-  }, [count]);
+  }, [unreadCount]);
+
+  const requestPermission = () => {
+    if ('Notification' in window) {
+      window.Notification.requestPermission();
+    }
+  };
 
   return (
     <button 
-      onClick={onClick}
+      onClick={() => {
+        onClick?.();
+        requestPermission();
+      }}
       className={`
         relative p-2 rounded-xl transition-all
         hover:bg-slate-100 active:scale-95
         ${isAnimating ? 'animate-bounce' : ''}
       `}
     >
-      {count > 0 ? (
+      {unreadCount > 0 ? (
         <Bell className="w-5 h-5 text-slate-600" />
       ) : (
         <BellOff className="w-5 h-5 text-slate-400" />
       )}
-      {count > 0 && (
+      {unreadCount > 0 && (
         <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-          {count > 9 ? '9+' : count}
+          {unreadCount > 9 ? '9+' : unreadCount}
         </span>
       )}
     </button>
@@ -282,7 +291,6 @@ export const AdvancedCard = ({
         transition-all duration-300
         ${hover ? 'hover:shadow-xl hover:-translate-y-1 hover:border-sky-200' : ''}
         ${onClick ? 'cursor-pointer' : ''}
-        ${on}
         ${className}
       `}
     >

@@ -31,6 +31,7 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import { clearSession, getStoredSession, saveCurrentView, getCurrentView, clearCurrentView } from './services/storageService';
 import { getCurrentUser, login as authLogin, type AuthResponse } from './services/authService';
+import { NotificationContainer } from './components/NotificationSystem';
 
 type ViewState = 'landing' | 'login' | 'signup' | 'forgot-password' | 'reset-password' | 'dashboard' | 'about' | 'faq' | 'news' | 'features' | 'saved' | 'trips' | 'profile' | 'notifications' | 'route-optimizer' | 'translator' | 'qr-guide' | 'group-plan' | 'ai-suggestion' | 'admin' | 'blog' | 'pricing' | 'contact' | 'testimonials' | 'gallery' | 'help' | 'terms' | 'privacy';
 
@@ -314,6 +315,7 @@ export default function App() {
   return (
     <div className="min-h-screen w-full relative overflow-x-hidden">
       {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+      <NotificationContainer />
       <GlobalAestheticBackground />
       <div className="relative z-0">{renderView()}</div>
     </div>

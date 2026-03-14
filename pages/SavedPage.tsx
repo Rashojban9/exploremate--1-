@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Trash2, MapPin, Calendar, ArrowRight, Heart, BookOpen, Plane, Grid, Compass, Mountain, User, Bell, X, Share2, Clock, Star, DollarSign, ExternalLink } from 'lucide-react';
-import { deleteSavedItem, listSavedItems, type ApiSavedItem, type ApiSavedItemType } from '../services/api';
+import { deleteSavedItem, listSavedItems, type SavedItemResponse, type SavedItemType } from '../services/api';
 
 type SavedItemUIType = 'destination' | 'itinerary' | 'article';
 
@@ -25,7 +25,7 @@ interface SavedItemUI {
 
 const DEFAULT_SAVED_IMAGE = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&q=80&w=800';
 
-const mapSavedType = (type: ApiSavedItemType): SavedItemUIType => {
+const mapSavedType = (type: SavedItemType): SavedItemUIType => {
   if (type === 'ITINERARY') return 'itinerary';
   if (type === 'ARTICLE') return 'article';
   return 'destination';
@@ -48,7 +48,7 @@ const relativeTime = (isoDate: string): string => {
   return `${Math.floor(diffMs / week)} week${Math.floor(diffMs / week) > 1 ? 's' : ''} ago`;
 };
 
-const mapSavedItemToUI = (item: ApiSavedItem): SavedItemUI => {
+const mapSavedItemToUI = (item: SavedItemResponse): SavedItemUI => {
   const type = mapSavedType(item.type);
   const base: SavedItemUI = {
     id: item.id,

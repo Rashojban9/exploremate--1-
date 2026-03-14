@@ -66,7 +66,7 @@ const AboutPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => v
 
     tl.fromTo('.hero-badge',
       { y: 20, opacity: 0, scale: 0.9 },
-      { y: 0, opacity: 1, duration: duration1, scale: 0.6, ease: 'back.out(1.7)' }
+      { y: 0, opacity: 1, duration: 1, scale: 0.6, ease: 'back.out(1.7)' }
     );
 
     tl.fromTo('.hero-title-line',

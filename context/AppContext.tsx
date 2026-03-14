@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect, ReactNode } from 'react';
 import { getStoredSession } from '../services/storageService';
 import { getCurrentUser, logout as authLogout, type AuthResponse, type CurrentUserResponse } from '../services/authService';
+import { getNotifications, markAsRead as apiMarkAsRead, getNotificationWebSocketUrl, type Notification as ApiNotification } from '../services/notificationService';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 // Types
 export interface User {
@@ -16,6 +19,9 @@ export interface Notification {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
   duration?: number;
+  read?: boolean;
+  userEmail?: string;
+  createdAt?: string;
 }
 
 export interface UIState {
@@ -43,6 +49,8 @@ type AppAction =
   | { type: 'TOGGLE_SIDEBAR' }
   | { type: 'SET_SIDEBAR'; payload: boolean }
   | { type: 'ADD_NOTIFICATION'; payload: Notification }
+  | { type: 'SET_NOTIFICATIONS'; payload: Notification[] }
+  | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'REMOVE_NOTIFICATION'; payload: string }
   | { type: 'SET_MOUSE_POSITION'; payload: { x: number; y: number } }
   | { type: 'SET_SCROLL_POSITION'; payload: number }
@@ -88,6 +96,24 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ui: {
           ...state.ui,
           notifications: [...state.ui.notifications, action.payload]
+        }
+      };
+    case 'SET_NOTIFICATIONS':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          notifications: action.payload
+        }
+      };
+    case 'MARK_NOTIFICATION_READ':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          notifications: state.ui.notifications.map(n => 
+            n.id === action.payload ? { ...n, read: true } : n
+          )
         }
       };
     case 'REMOVE_NOTIFICATION':
@@ -187,6 +213,62 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [state.ui.notifications]);
 
+  // WebSocket Connection
+  useEffect(() => {
+    if (!state.isAuthenticated || !state.user) return;
+
+    // Fetch initial notifications
+    const fetchInitial = async () => {
+      try {
+        const data = await getNotifications();
+        dispatch({ type: 'SET_NOTIFICATIONS', payload: data as unknown as Notification[] });
+      } catch (err) {
+        console.error('Failed to fetch notifications', err);
+      }
+    };
+    void fetchInitial();
+
+    // Setup WebSocket
+    const stompClient = new Client({
+      brokerURL: getNotificationWebSocketUrl().startsWith('ws') ? getNotificationWebSocketUrl() : undefined,
+      webSocketFactory: () => new SockJS(getNotificationWebSocketUrl().replace('ws:', 'http:').replace('wss:', 'https:')),
+      connectHeaders: {
+        // Typically JWT would go in a specific header or as a query param if using raw WS
+      },
+      debug: (str) => {
+        // console.log('STOMP: ' + str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    stompClient.onConnect = () => {
+      console.log('Connected to Notification WebSocket');
+      // Subscribe to user-specific queue
+      stompClient.subscribe(`/user/${state.user?.email}/queue/notifications`, (message) => {
+        const notification = JSON.parse(message.body) as Notification;
+        dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
+        
+        // Browser Notification if permitted
+        if ('Notification' in window && window.Notification.permission === 'granted') {
+          new window.Notification('ExploreMate', { body: notification.message });
+        }
+      });
+    };
+
+    stompClient.onStompError = (frame) => {
+      console.error('Broker reported error: ' + frame.headers['message']);
+      console.error('Additional details: ' + frame.body);
+    };
+
+    stompClient.activate();
+
+    return () => {
+      stompClient.deactivate();
+    };
+  }, [state.isAuthenticated, state.user?.email]);
+
   const login = useCallback((auth: AuthResponse) => {
     dispatch({
       type: 'SET_USER',
@@ -212,8 +294,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const removeNotification = useCallback((id: string) => {
+  const removeNotification = useCallback(async (id: string) => {
+    // Local first for snappy UI
     dispatch({ type: 'REMOVE_NOTIFICATION', payload: id });
+    try {
+      // Backend sync
+      await apiMarkAsRead(id);
+    } catch (err) {
+      console.error('Failed to mark as read', err);
+    }
   }, []);
 
   return (

@@ -13,7 +13,7 @@ class TranslationPipeline {
 
     static async getInstance(progress_callback?: any) {
         if (this.instance === null) {
-            this.instance = await pipeline(this.task, this.model, { 
+            this.instance = await pipeline(this.task as any, this.model, { 
                 progress_callback,
                 quantized: true, // Use 8-bit quantization (~250MB)
             });

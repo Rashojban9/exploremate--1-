@@ -74,9 +74,37 @@ export {
   type Language,
 } from './translationService';
 
+// ─── Group Trips ──────────────────────────────────────────────────────────────
+export {
+  getGroupTrips,
+  createGroupTrip,
+  getGroupTripDetail,
+  updateGroupTrip,
+  deleteGroupTrip,
+  joinByInviteCode,
+  getMembers as getGroupTripMembers,
+  addMember as addGroupTripMember,
+  removeMember as removeGroupTripMember,
+  getActivities as getGroupTripActivities,
+  proposeActivity,
+  voteActivity,
+  confirmActivity,
+  deleteActivity,
+  getMessages as getGroupTripMessages,
+  sendMessage as sendGroupTripMessage,
+  getExpenses as getGroupTripExpenses,
+  addExpense as addGroupTripExpense,
+  getBudgetSummary,
+  type GroupTripRequest,
+  type GroupTripResponse,
+  type GroupTripDetailResponse,
+  type GroupTripMemberResponse,
+  type GroupTripActivityResponse,
+  type GroupTripMessageResponse,
+  type GroupTripExpenseResponse,
+  type BudgetSummary,
+} from './groupTripService';
 
-// ─── Notification ─────────────────────────────────────────────────────────────
-export { createNotification, notify } from './notificationService';
 
 // ─── Legacy type aliases (used in existing pages) ────────────────────────────
 
@@ -145,6 +173,13 @@ export async function createTripLegacy(payload: CreateTripPayload): Promise<ApiT
 /** @deprecated Use createSavedItem from savedItemService directly */
 export { csi as createSavedItemLegacy };
 export { dsi as deleteSavedItemLegacy };
+
+import * as groupTripService from './groupTripService';
+export { groupTripService };
+export * from './groupTripService';
+
+// Re-export QR Guide service
+export * from './qrGuideService';
 
 // Re-export getToken for AppContext
 export { getToken } from './storageService';
