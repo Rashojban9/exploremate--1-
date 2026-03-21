@@ -4,6 +4,8 @@ import { gsap } from 'gsap';
 import { Shield, Users, Activity, LogOut, ArrowLeft, RefreshCw, Trash2, Edit, AlertTriangle, CheckCircle, Database, Server, Globe, Search, Filter, Image, FileText, Settings, Upload, UserPlus, ShieldCheck, DollarSign, MapPin, Newspaper, Calendar, Menu, Link, ToggleLeft } from 'lucide-react';
 import { AdvancedButton, Badge, Tabs, Avatar, LoadingSpinner } from '../components/NotificationSystem';
 import { GlowBorder, AnimatedCounter, RevealOnScroll } from '../components/AdvancedAnimations';
+import { contentService, type PageContent } from '../services/contentService';
+import { getAllUsers, type ProfileResponse } from '../services/authService';
 
 const StatCard = ({ label, value, change, icon: Icon, color, delay }: any) => (
   <RevealOnScroll direction="up" delay={delay}>
@@ -32,21 +34,21 @@ const StatCard = ({ label, value, change, icon: Icon, color, delay }: any) => (
   </RevealOnScroll>
 );
 
-const UserRow = ({ user, index }: { user: any; index: number }) => (
+const UserRow = ({ user, index }: { user: ProfileResponse; index: number }) => (
   <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-sky-50 transition-colors group animate-slide-up" style={{ animationDelay: `${index * 0.05}s` }}>
     <div className="flex items-center gap-4">
-      <Avatar alt={user.name} size="md" status={user.status === 'Online' ? 'online' : 'offline'} />
+      <Avatar alt={user.name} size="md" status={'online'} />
       <div>
         <div className="font-bold text-slate-900">{user.name}</div>
         <div className="text-sm text-slate-500">{user.email}</div>
       </div>
     </div>
     <div className="flex items-center gap-6">
-      <Badge variant={user.status === 'Online' ? 'success' : user.status === 'Active' ? 'info' : 'default'}>
-        {user.status}
+      <Badge variant={'success'}>
+        Active
       </Badge>
-      <span className="text-xs font-bold text-slate-400 uppercase">{user.rank}</span>
-      <span className="text-xs text-slate-400">{user.sync}</span>
+      <span className="text-xs font-bold text-slate-400 uppercase">{user.role || 'USER'}</span>
+      <span className="text-xs text-slate-400">Synced</span>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button className="p-2 hover:bg-white rounded-lg transition-colors">
           <Edit size={16} className="text-slate-400" />
@@ -62,6 +64,103 @@ const UserRow = ({ user, index }: { user: any; index: number }) => (
 const AdminPage = ({ onBack }: { onBack: () => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState('users');
+  const [pages, setPages] = useState<PageContent[]>([]);
+  const [isLoadingPages, setIsLoadingPages] = useState(false);
+  const [editingPage, setEditingPage] = useState<PageContent | null>(null);
+
+  const [roles, setRoles] = useState<any[]>([]);
+  const [selectedRole, setSelectedRole] = useState<any | null>(null);
+
+  // --- Settings State ---
+  const [systemSettings, setSystemSettings] = useState({
+    maintenanceMode: false,
+    emailNotifications: true,
+    analyticsTracking: false
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // Load backend content settings
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      const loadSettings = async () => {
+        const settingsPage = await contentService.getPageBySlug('system-settings');
+        if (settingsPage && settingsPage.contentBlocks) {
+          setSystemSettings({
+            maintenanceMode: settingsPage.contentBlocks.maintenanceMode === 'true',
+            emailNotifications: settingsPage.contentBlocks.emailNotifications !== 'false',
+            analyticsTracking: settingsPage.contentBlocks.analyticsTracking === 'true'
+          });
+        }
+      };
+      loadSettings();
+    }
+  }, [activeTab]);
+
+  const handleToggleSetting = async (key: keyof typeof systemSettings) => {
+    const newValue = !systemSettings[key];
+    setSystemSettings(prev => ({ ...prev, [key]: newValue }));
+    
+    setIsSavingSettings(true);
+    try {
+      const updatedBlocks = {
+        maintenanceMode: String(key === 'maintenanceMode' ? newValue : systemSettings.maintenanceMode),
+        emailNotifications: String(key === 'emailNotifications' ? newValue : systemSettings.emailNotifications),
+        analyticsTracking: String(key === 'analyticsTracking' ? newValue : systemSettings.analyticsTracking)
+      };
+      
+      await contentService.updatePageContent('system-settings', {
+        slug: 'system-settings',
+        title: 'System Settings',
+        contentBlocks: updatedBlocks,
+        status: 'Published'
+      });
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  // --- Load Initial Content Data ---b is selected
+  useEffect(() => {
+    if (activeTab === 'pages') loadPages();
+    if (activeTab === 'users') loadUsers();
+  }, [activeTab]);
+
+  const loadPages = async () => {
+    setIsLoadingPages(true);
+    try {
+      const data = await contentService.getAllPages();
+      setPages(data);
+    } catch (e) {
+      console.error('Failed to load pages', e);
+    } finally {
+      setIsLoadingPages(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const data = await getAllUsers();
+      setUsers(data || []);
+    } catch (e) {
+      console.error('Failed to load users', e);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const handleSavePage = async () => {
+    if (!editingPage) return;
+    try {
+      await contentService.updatePageContent(editingPage.slug, editingPage);
+      setEditingPage(null);
+      loadPages();
+    } catch (e) {
+      console.error('Failed to save page', e);
+    }
+  };
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -83,26 +182,12 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
     { label: 'Compute Load', value: '18%', change: 'Low', icon: Server, color: 'text-orange-500', delay: 0.2 },
     { label: 'Secure Storage', value: '1.2TB', change: '82%', icon: Database, color: 'text-purple-500', delay: 0.3 },
   ];
-
-  const USERS = [
-    { name: 'Root System', email: 'owner@exploremate.ai', status: 'Online', rank: 'MASTER', sync: 'Real-time' },
-    { name: 'Sarah J.', email: 'sarah.j@travel.net', status: 'Standby', rank: 'LEVEL 2', sync: '12m ago' },
-    { name: 'Arjun N.', email: 'arjun.n@guide.io', status: 'Online', rank: 'LEVEL 2', sync: '3h ago' },
-    { name: 'Auto-Bot Alpha', email: 'ai.system@cloud.io', status: 'Active', rank: 'DAEMON', sync: 'Continuous' },
-  ];
   
   const ROLES = [
     { name: 'Super Admin', users: 2, perms: 'Full access', status: 'Active' },
     { name: 'Content Manager', users: 5, perms: 'Pages, News, Media', status: 'Active' },
     { name: 'Support', users: 8, perms: 'Users, Trips', status: 'Limited' },
     { name: 'Analyst', users: 4, perms: 'Read-only', status: 'Limited' },
-  ];
-  
-  const PAGES = [
-    { title: 'Landing', slug: '/', status: 'Published', updated: 'Jan 28, 2026' },
-    { title: 'Features', slug: '/features', status: 'Published', updated: 'Jan 25, 2026' },
-    { title: 'Pricing', slug: '/pricing', status: 'Draft', updated: 'Jan 31, 2026' },
-    { title: 'About', slug: '/about', status: 'Published', updated: 'Jan 12, 2026' },
   ];
   
   const MEDIA = [
@@ -188,9 +273,15 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                 </AdvancedButton>
               </div>
               <div className="space-y-3">
-                {USERS.map((user, i) => (
-                  <UserRow key={i} user={user} index={i} />
-                ))}
+                {isLoadingUsers ? (
+                  <div className="flex justify-center p-12"><LoadingSpinner size="lg" /></div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 text-sm">No users found in database.</div>
+                ) : (
+                  users.map((user, i) => (
+                    <UserRow key={i} user={user} index={i} />
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -227,50 +318,137 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
             </div>
           )}
 
-          {activeTab === 'pages' && (
+          {activeTab === 'pages' && !editingPage && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-900">Page Management</h2>
-                <AdvancedButton variant="primary" size="sm" icon={<Upload size={16} />}>
+                <AdvancedButton variant="primary" size="sm" icon={<Upload size={16} />} onClick={() => setEditingPage({ slug: 'new-page', title: 'New Page', status: 'Draft', contentBlocks: {}, updatedAt: '' })}>
                   New Page
                 </AdvancedButton>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-100">
-                      <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Title</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Slug</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Status</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Updated</th>
-                      <th className="text-right py-3 px-4 text-xs font-bold text-slate-400 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PAGES.map((page, i) => (
-                      <tr key={i} className="border-b border-slate-50 hover:bg-sky-50/50 transition-colors">
-                        <td className="py-4 px-4 font-medium text-slate-900">{page.title}</td>
-                        <td className="py-4 px-4 text-sm text-slate-500 font-mono">{page.slug}</td>
-                        <td className="py-4 px-4">
-                          <Badge variant={page.status === 'Published' ? 'success' : 'warning'}>
-                            {page.status}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-4 text-sm text-slate-500">{page.updated}</td>
-                        <td className="py-4 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button className="p-2 hover:bg-white rounded-lg transition-colors">
-                              <Edit size={16} className="text-slate-400" />
-                            </button>
-                            <button className="p-2 hover:bg-white rounded-lg transition-colors">
-                              <Globe size={16} className="text-sky-400" />
-                            </button>
-                          </div>
-                        </td>
+              {isLoadingPages ? (
+                <div className="flex justify-center p-12"><LoadingSpinner size="lg" /></div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Title</th>
+                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Slug</th>
+                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Status</th>
+                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-400 uppercase">Updated</th>
+                        <th className="text-right py-3 px-4 text-xs font-bold text-slate-400 uppercase">Actions</th>
                       </tr>
+                    </thead>
+                    <tbody>
+                      {pages.length === 0 && (
+                        <tr><td colSpan={5} className="text-center py-8 text-slate-500 text-sm">No pages found. Create one.</td></tr>
+                      )}
+                      {pages.map((page, i) => (
+                        <tr key={i} className="border-b border-slate-50 hover:bg-sky-50/50 transition-colors">
+                          <td className="py-4 px-4 font-medium text-slate-900">{page.title}</td>
+                          <td className="py-4 px-4 text-sm text-slate-500 font-mono">{page.slug}</td>
+                          <td className="py-4 px-4">
+                            <Badge variant={page.status === 'Published' ? 'success' : 'warning'}>
+                              {page.status}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-slate-500">{new Date(page.updatedAt).toLocaleDateString()}</td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => setEditingPage(page)} className="p-2 hover:bg-white rounded-lg transition-colors">
+                                <Edit size={16} className="text-slate-400 hover:text-sky-500" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'pages' && editingPage && (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setEditingPage(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                    <ArrowLeft className="w-5 h-5 text-slate-600" />
+                  </button>
+                  <h2 className="text-lg font-bold text-slate-900">Edit Page: {editingPage.title}</h2>
+                </div>
+                <div className="flex gap-3">
+                  <AdvancedButton variant="ghost" size="sm" onClick={() => setEditingPage(null)}>Cancel</AdvancedButton>
+                  <AdvancedButton variant="primary" size="sm" icon={<CheckCircle size={16}/>} onClick={handleSavePage}>Save Changes</AdvancedButton>
+                </div>
+              </div>
+
+              <div className="space-y-6 max-w-4xl">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Internal Title</label>
+                    <input type="text" value={editingPage.title} onChange={(e) => setEditingPage({...editingPage, title: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">URL Slug</label>
+                    <input type="text" value={editingPage.slug} onChange={(e) => setEditingPage({...editingPage, slug: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20 font-mono" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Status</label>
+                  <select value={editingPage.status} onChange={(e) => setEditingPage({...editingPage, status: e.target.value as any})} className="w-full p-4 bg-slate-50 border-0 rounded-xl text-sm">
+                    <option value="Published">Published</option>
+                    <option value="Draft">Draft</option>
+                  </select>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-slate-900">Content Blocks</h3>
+                    <button 
+                      onClick={() => {
+                        const newKey = prompt('Enter block identifier (e.g. hero_title):');
+                        if (newKey) setEditingPage({...editingPage, contentBlocks: {...(editingPage.contentBlocks || {}), [newKey]: ''}});
+                      }}
+                      className="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100"
+                    >
+                      + Add Block
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {Object.entries(editingPage.contentBlocks || {}).map(([key, value]) => (
+                      <div key={key} className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded">{key}</span>
+                          <button 
+                            onClick={() => {
+                              const newBlocks = {...editingPage.contentBlocks};
+                              delete newBlocks[key];
+                              setEditingPage({...editingPage, contentBlocks: newBlocks});
+                            }}
+                            className="text-xs text-red-500 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <textarea 
+                          value={value} 
+                          onChange={(e) => setEditingPage({...editingPage, contentBlocks: {...editingPage.contentBlocks, [key]: e.target.value}})}
+                          className="w-full min-h-[100px] p-3 bg-slate-50 border-0 rounded-lg text-sm text-slate-700 resize-y focus:ring-2 focus:ring-sky-500/20"
+                        />
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                    {Object.keys(editingPage.contentBlocks || {}).length === 0 && (
+                        <div className="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl">
+                            No content blocks defined. Add a block to store dynamic text, HTML, or URLs.
+                        </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -322,8 +500,10 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                         <h3 className="font-bold text-slate-900">Maintenance Mode</h3>
                         <p className="text-sm text-slate-500">Enable to put site in maintenance mode</p>
                       </div>
-                      <div className="w-12 h-6 bg-slate-200 rounded-full relative cursor-pointer">
-                        <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-all" />
+                      <div 
+                        onClick={() => handleToggleSetting('maintenanceMode')}
+                        className={`w-12 h-6 ${systemSettings.maintenanceMode ? 'bg-sky-500' : 'bg-slate-200'} rounded-full relative cursor-pointer transition-colors ${isSavingSettings ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${systemSettings.maintenanceMode ? 'right-0.5' : 'left-0.5'}`} />
                       </div>
                     </div>
                   </div>
@@ -336,8 +516,10 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                         <h3 className="font-bold text-slate-900">Email Notifications</h3>
                         <p className="text-sm text-slate-500">Receive email alerts for user activity</p>
                       </div>
-                      <div className="w-12 h-6 bg-sky-500 rounded-full relative cursor-pointer">
-                        <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 transition-all" />
+                      <div 
+                        onClick={() => handleToggleSetting('emailNotifications')}
+                        className={`w-12 h-6 ${systemSettings.emailNotifications ? 'bg-sky-500' : 'bg-slate-200'} rounded-full relative cursor-pointer transition-colors ${isSavingSettings ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${systemSettings.emailNotifications ? 'right-0.5' : 'left-0.5'}`} />
                       </div>
                     </div>
                   </div>
@@ -350,8 +532,10 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                         <h3 className="font-bold text-slate-900">Analytics Tracking</h3>
                         <p className="text-sm text-slate-500">Enable Google Analytics tracking</p>
                       </div>
-                      <div className="w-12 h-6 bg-slate-200 rounded-full relative cursor-pointer">
-                        <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-all" />
+                      <div 
+                        onClick={() => handleToggleSetting('analyticsTracking')}
+                        className={`w-12 h-6 ${systemSettings.analyticsTracking ? 'bg-sky-500' : 'bg-slate-200'} rounded-full relative cursor-pointer transition-colors ${isSavingSettings ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${systemSettings.analyticsTracking ? 'right-0.5' : 'left-0.5'}`} />
                       </div>
                     </div>
                   </div>

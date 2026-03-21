@@ -2,7 +2,7 @@ import { gsap } from 'gsap';
 import { Bell, Calendar, Camera, Check, ChevronDown, Compass, CreditCard, DollarSign, Edit2, Globe, LogOut, Mail, MapPin, Mountain, Phone, Plane, Save, Settings, Shield, User, Users, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { InputField } from '../components/SharedUI';
-import { getProfile, updateProfile, type ProfileUpdatePayload } from '../services/authService';
+import { changePassword, getProfile, updateProfile, type ProfileUpdatePayload } from '../services/authService';
 import { getTripStats, type UserTripStats } from '../services/tripService';
 
 const CURRENCIES = [
@@ -29,6 +29,11 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
    const [currency, setCurrency] = useState('USD');
    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
    const [isLogoutAllModalOpen, setIsLogoutAllModalOpen] = useState(false);
+
+   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+   const [isChangingPassword, setIsChangingPassword] = useState(false);
+   const [passwordError, setPasswordError] = useState('');
+   const [passwordSuccess, setPasswordSuccess] = useState('');
 
    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
@@ -665,10 +670,38 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                      <X size={24} />
                   </button>
                   <h2 className="text-2xl font-bold text-slate-900 mb-6 font-display">Change Password</h2>
-                  <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setIsPasswordModalOpen(false); }}>
-                     <InputField label="Current Password" type="password" placeholder="••••••••" required />
-                     <InputField label="New Password" type="password" placeholder="••••••••" required />
-                     <InputField label="Confirm New Password" type="password" placeholder="••••••••" required />
+                  <form className="space-y-4" onSubmit={async (e) => {
+                     e.preventDefault();
+                     if (passwordForm.new !== passwordForm.confirm) {
+                        setPasswordError('New passwords do not match');
+                        return;
+                     }
+                     if (passwordForm.new.length < 8) {
+                        setPasswordError('New password must be at least 8 characters');
+                        return;
+                     }
+                     
+                     setIsChangingPassword(true);
+                     setPasswordError('');
+                     setPasswordSuccess('');
+                     
+                     try {
+                        await changePassword(passwordForm.current, passwordForm.new);
+                        setPasswordSuccess('Password updated successfully!');
+                        setPasswordForm({ current: '', new: '', confirm: '' });
+                        setTimeout(() => setIsPasswordModalOpen(false), 2000);
+                     } catch (err) {
+                        setPasswordError(err instanceof Error ? err.message : 'Failed to update password');
+                     } finally {
+                        setIsChangingPassword(false);
+                     }
+                  }}>
+                     {passwordError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">{passwordError}</div>}
+                     {passwordSuccess && <div className="p-3 bg-green-50 text-green-600 text-sm rounded-xl border border-green-100">{passwordSuccess}</div>}
+
+                     <InputField label="Current Password" type="password" placeholder="••••••••" value={passwordForm.current} onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})} required />
+                     <InputField label="New Password" type="password" placeholder="••••••••" value={passwordForm.new} onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})} required />
+                     <InputField label="Confirm New Password" type="password" placeholder="••••••••" value={passwordForm.confirm} onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})} required />
 
                      <div className="pt-4 flex gap-3">
                         <button
@@ -680,9 +713,10 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                         </button>
                         <button
                            type="submit"
-                           className="flex-1 py-3 bg-sky-600 text-white font-bold rounded-xl hover:bg-sky-700 shadow-lg shadow-sky-600/20 transition-all active:scale-95"
+                           disabled={isChangingPassword}
+                           className="flex-1 py-3 bg-sky-600 text-white font-bold rounded-xl hover:bg-sky-700 shadow-lg shadow-sky-600/20 transition-all active:scale-95 disabled:opacity-50"
                         >
-                           Update
+                           {isChangingPassword ? 'Updating...' : 'Update'}
                         </button>
                      </div>
                   </form>

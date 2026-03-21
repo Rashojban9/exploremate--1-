@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Building, Linkedin, Award, Globe, Mail, Phone, MapPin, Sparkles, Users, Target, Heart, ArrowRight, Star } from 'lucide-react';
 import { Navbar, Footer } from '../components/Navigation';
+import { contentService, type PageContent } from '../services/contentService';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -61,6 +62,14 @@ const ValueCard = ({ icon: Icon, title, description, index }: { icon: any; title
 );
 
 const AboutPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
+  const [content, setContent] = useState<PageContent | null>(null);
+
+  useEffect(() => {
+    contentService.getPageBySlug('about').then((data) => {
+      if (data) setContent(data);
+    });
+  }, []);
+
   useEffect(() => {
     const tl = gsap.timeline();
 
@@ -134,14 +143,14 @@ const AboutPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => v
           
           <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 text-center">
              <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card border border-sky-200 text-sky-600 font-bold text-xs uppercase tracking-wider shadow-lg mb-6">
-                <Sparkles size={14} className="fill-sky-600" /> Our Story
+                <Sparkles size={14} className="fill-sky-600" /> {content?.contentBlocks?.hero_badge || "Our Story"}
              </div>
              <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold text-slate-900 mb-6 leading-tight overflow-hidden">
-               <div className="hero-title-line">Redefining Travel with</div>
-               <div className="hero-title-line gradient-text">Artificial Intelligence</div>
+               <div className="hero-title-line">{content?.contentBlocks?.hero_title_1 || "Redefining Travel with"}</div>
+               <div className="hero-title-line gradient-text">{content?.contentBlocks?.hero_title_2 || "Artificial Intelligence"}</div>
              </h1>
              <p className="hero-desc text-base sm:text-lg md:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
-               At ExploreMate, we believe travel should be seamless, personalized, and unforgettable. By harnessing the power of advanced AI, we connect travelers to authentic experiences, smart routes, and local cultures like never before.
+               {content?.contentBlocks?.hero_desc || "At ExploreMate, we believe travel should be seamless, personalized, and unforgettable. By harnessing the power of advanced AI, we connect travelers to authentic experiences, smart routes, and local cultures like never before."}
              </p>
           </div>
        </section>

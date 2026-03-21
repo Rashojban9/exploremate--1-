@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Sparkles, ArrowRight, MapPin, Star, Heart, Compass, Zap, Coins, ArrowRightLeft, RefreshCw, TrendingUp, ChevronUp } from 'lucide-react';
 import { Navbar, Footer } from '../components/Navigation';
 import { LOGIN_IMAGES, DESTINATION_IMAGES } from '../assets/images';
+import { contentService, type PageContent } from '../services/contentService';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -37,6 +38,13 @@ const DestinationCard = ({ image, title, location, rating, price, index }: any) 
 
 const LandingPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
   const [showAllLocations, setShowAllLocations] = useState(false);
+  const [content, setContent] = useState<PageContent | null>(null);
+
+  useEffect(() => {
+    contentService.getPageBySlug('home').then((data) => {
+      if (data) setContent(data);
+    });
+  }, []);
 
   useEffect(() => {
     const tl = gsap.timeline();
@@ -100,16 +108,16 @@ const LandingPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) =>
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
           <div className="relative z-10 text-center lg:text-left">
             <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card border border-sky-200 text-sky-600 font-bold text-xs uppercase tracking-wider shadow-lg mb-6 animate-pulse-glow">
-              <Sparkles size={14} className="fill-sky-600" /> Nepal's Premier AI Guide
+              <Sparkles size={14} className="fill-sky-600" /> {content?.contentBlocks?.hero_badge || "Nepal's Premier AI Guide"}
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-bold text-slate-900 mb-6 leading-tight">
-              <div className="hero-title-line">Explore Nepal</div>
-              <div className="hero-title-line gradient-text">with Intelligence</div>
+              <div className="hero-title-line">{content?.contentBlocks?.hero_title_1 || "Explore Nepal"}</div>
+              <div className="hero-title-line gradient-text">{content?.contentBlocks?.hero_title_2 || "with Intelligence"}</div>
             </h1>
 
             <p className="hero-desc text-base sm:text-lg md:text-xl text-slate-500 mb-10 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Your "locally file-stored" digital companion for real-time mountain intelligence and cultural discovery.
+              {content?.contentBlocks?.hero_desc || 'Your "locally file-stored" digital companion for real-time mountain intelligence and cultural discovery.'}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
@@ -165,8 +173,8 @@ const LandingPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) =>
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-12 gap-6 section-reveal">
             <div className="text-center sm:text-left">
-              <h2 className="text-3xl md:text-5xl font-display font-bold text-slate-900 mb-4">Trending Local Picks</h2>
-              <p className="text-slate-500 text-base md:text-lg max-w-md">Curated from high-fidelity local asset storage.</p>
+              <h2 className="text-3xl md:text-5xl font-display font-bold text-slate-900 mb-4">{content?.contentBlocks?.section_title || "Trending Local Picks"}</h2>
+              <p className="text-slate-500 text-base md:text-lg max-w-md">{content?.contentBlocks?.section_desc || "Curated from high-fidelity local asset storage."}</p>
             </div>
             <button
               onClick={() => setShowAllLocations(!showAllLocations)}

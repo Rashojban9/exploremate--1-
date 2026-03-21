@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ArrowRight, User, Eye, EyeOff, ShieldCheck, MapPin, AlertCircle } from 'lucide-react';
 import { InputField, Logo } from '../components/SharedUI';
@@ -124,41 +124,10 @@ const LoginPage = ({ onLogin, onNavigate }: { onLogin: (auth: AuthResponse) => v
     setIsLoading(true);
 
     try {
-      // Demo Mode: Allow login without backend for development
-      const isDemoUser = email.trim() === 'demo@exploremate.app' && password === 'Password@123';
-      const isAdminUser = email.trim() === 'admin@exploremate.app' && password === 'Password@123';
-
-      if (isDemoUser || isAdminUser) {
-        // Simulate successful login with mock data
-        const mockAuth = {
-          token: 'demo-token-' + Date.now(),
-          userId: isDemoUser ? 1 : 2,
-          name: isDemoUser ? 'Demo User' : 'Admin',
-          email: email.trim(),
-          role: isAdminUser ? 'ADMIN' : 'USER'
-        };
-
-        // Store in localStorage using correct keys from storageService
-        localStorage.setItem('exploremate_token', mockAuth.token);
-        localStorage.setItem('exploremate_user', JSON.stringify({
-          id: mockAuth.userId,
-          name: mockAuth.name,
-          email: mockAuth.email,
-          role: mockAuth.role
-        }));
-
-        // Simulate network delay for realistic feel
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        onLogin(mockAuth);
-        return;
-      }
-
-      // Try real backend login for other credentials
       const auth = await loginUser({ email: email.trim(), password });
       onLogin(auth);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to sign in. Try demo credentials.';
+      const message = err instanceof Error ? err.message : 'Unable to sign in. Please verify your credentials.';
       setError(message);
       gsap.to(formRef.current, { x: -6, duration: 0.08, repeat: 4, yoyo: true });
     } finally {
@@ -249,59 +218,7 @@ const LoginPage = ({ onLogin, onNavigate }: { onLogin: (auth: AuthResponse) => v
               )}
             </button>
 
-            {/* Demo Credentials Section */}
-            <div className="form-element mt-8 p-6 glass-card rounded-2xl border border-sky-100">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 bg-gradient-to-r from-sky-500 to-purple-600 rounded-full animate-pulse"></div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Quick Access</h3>
-              </div>
 
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('demo@exploremate.app');
-                    setPassword('Password@123');
-                  }}
-                  className="w-full p-4 bg-gradient-to-r from-sky-50 to-purple-50 hover:from-sky-100 hover:to-purple-100 rounded-xl text-left transition-all border border-sky-100 hover:border-sky-200 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-sky-600 mb-1">Demo User</div>
-                      <div className="text-[10px] text-slate-500 font-medium">demo@exploremate.app</div>
-                    </div>
-                    <div className="text-xs text-slate-400 group-hover:text-sky-600 transition-colors">Click to fill</div>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('admin@exploremate.app');
-                    setPassword('Password@123');
-                  }}
-                  className="w-full p-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl text-left transition-all border border-purple-100 hover:border-purple-200 group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-purple-600 mb-1">Admin Access</div>
-                      <div className="text-[10px] text-slate-500 font-medium">admin@exploremate.app</div>
-                    </div>
-                    <div className="text-xs text-slate-400 group-hover:text-purple-600 transition-colors">Click to fill</div>
-                  </div>
-                </button>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <p className="text-[10px] text-slate-400 text-center mb-2">
-                  Password: <span className="font-mono font-bold text-slate-600">Password@123</span>
-                </p>
-                <div className="flex items-center justify-center gap-2 text-[9px] text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                  <AlertCircle size={12} />
-                  <span className="font-medium">Demo mode active - No backend required!</span>
-                </div>
-              </div>
-            </div>
 
             <div className="form-element flex items-center justify-between text-[11px] font-bold pt-4 text-slate-400">
               <button type="button" onClick={() => onNavigate('signup')} className="hover:text-sky-600 transition-colors uppercase tracking-wider">

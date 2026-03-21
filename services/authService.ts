@@ -168,3 +168,14 @@ export async function forgotPassword(email: string): Promise<void> {
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
     await post<any>('/api/auth/reset-password', { token, newPassword });
 }
+
+/** Change password for authenticated users */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await put<any>('/api/auth/profile/password', { currentPassword, newPassword }, true);
+}
+
+/** Admin: Get all users */
+export async function getAllUsers(): Promise<ProfileResponse[]> {
+    const res = await get<any>('/api/auth/admin/users', true);
+    return unpack<ProfileResponse[]>(res);
+}
