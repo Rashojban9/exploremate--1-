@@ -24,7 +24,7 @@ export interface SavedItemRequest {
 }
 
 export interface SavedItemResponse {
-    id: number;
+    id: number | string;
     type: SavedItemType;
     title: string;
     location?: string;

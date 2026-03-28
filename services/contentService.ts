@@ -9,7 +9,16 @@ export interface PageContent {
 }
 
 export const contentService = {
-  // Public endpoint
+  // Public endpoints
+  getPublicPages: async (): Promise<PageContent[]> => {
+    try {
+      return await get<PageContent[]>('/api/content/pages', false);
+    } catch (error) {
+      console.warn('Failed to fetch public pages', error);
+      return [];
+    }
+  },
+
   getPageBySlug: async (slug: string): Promise<PageContent | null> => {
     try {
       return await get<PageContent>(`/api/content/pages/${slug}`, false);

@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { BookOpen, Clock, Calendar, ArrowRight, ChevronDown, Mail, Check, Loader2 } from 'lucide-react';
 import { Navbar, Footer } from '../components/Navigation';
+import { contentService, PageContent } from '../services/contentService';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,6 +36,33 @@ const BlogCard = ({ image, category, title, excerpt, date, readTime }: any) => (
 const BlogPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+  const [displayPosts, setDisplayPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+        setIsLoading(true);
+        try {
+            const pages = await contentService.getPublicPages();
+            if (pages && pages.length > 0) {
+                const mapped = pages.map(page => ({
+                    title: page.title,
+                    category: page.contentBlocks.category || 'Guides',
+                    excerpt: page.contentBlocks.excerpt || '',
+                    date: page.contentBlocks.date || new Date(page.updatedAt).toLocaleDateString(),
+                    readTime: page.contentBlocks.readTime || '5 min read',
+                    image: page.contentBlocks.image || "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&q=80&w=800"
+                }));
+                setDisplayPosts(mapped);
+            }
+        } catch (error) {
+            console.error("Failed to load blog posts", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchPosts();
+  }, []);
 
   useEffect(() => {
     const tl = gsap.timeline();
@@ -62,7 +90,7 @@ const BlogPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => vo
         scrollTrigger: { trigger: '.blog-grid', start: 'top 80%' }
       }
     );
-  }, []);
+  }, [isLoading]);
 
   const splitText = (text: string) => {
     return text.split('').map((char, index) => (
@@ -89,57 +117,6 @@ const BlogPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => vo
       }, 3000);
     }, 1500);
   };
-
-  const posts = [
-    {
-      title: "The Ultimate Packing List for Southeast Asia",
-      category: "Guides",
-      excerpt: "Traveling light doesn't mean leaving essentials behind. Here's exactly what you need for a month-long trip through Thailand, Vietnam, and Cambodia.",
-      date: "Oct 12, 2023",
-      readTime: "8 min read",
-      image: "https://images.unsplash.com/photo-1552422554-0d5af0c79fc6?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      title: "How AI is Revolutionizing Solo Travel",
-      category: "Tech",
-      excerpt: "From real-time translation to safety monitoring, discover how artificial intelligence is making solo adventures safer and more accessible than ever before.",
-      date: "Sep 28, 2023",
-      readTime: "6 min read",
-      image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      title: "Eating Your Way Through Osaka: A Foodie's Guide",
-      category: "Food",
-      excerpt: "Forget Tokyo; Osaka is Japan's true kitchen. We explore the best street food stalls, hidden izakayas, and Michelin-starred spots you can't miss.",
-      date: "Sep 15, 2023",
-      readTime: "12 min read",
-      image: "https://images.unsplash.com/photo-1574484284008-81dcec28d3e7?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      title: "Sustainable Tourism: Traveling Responsibly in 2024",
-      category: "Eco",
-      excerpt: "As travelers, we have a responsibility to protect the places we visit. Learn practical tips for reducing your carbon footprint and supporting local communities.",
-      date: "Aug 30, 2023",
-      readTime: "10 min read",
-      image: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      title: "Digital Nomad Life: Best Cities for Remote Work",
-      category: "Lifestyle",
-      excerpt: "Looking to take your office on the road? We've ranked the top cities based on WiFi speed, cost of living, community, and visa accessibility.",
-      date: "Aug 10, 2023",
-      readTime: "15 min read",
-      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      title: "Hidden Gems in the Himalayas",
-      category: "Adventure",
-      excerpt: "Beyond Everest Base Camp lies a world of untouched valleys and ancient monasteries. Discover the trekking routes less traveled.",
-      date: "Jul 22, 2023",
-      readTime: "9 min read",
-      image: "https://images.unsplash.com/photo-1585970281220-41834220b3c6?auto=format&fit=crop&q=80&w=800"
-    }
-  ];
 
   return (
     <div className="w-full relative">
@@ -205,9 +182,19 @@ const BlogPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => vo
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 blog-grid">
-               {posts.map((post, index) => (
-                  <BlogCard key={index} {...post} />
-               ))}
+               {isLoading ? (
+                  Array(6).fill(0).map((_, i) => (
+                    <div key={i} className="bg-slate-50 rounded-3xl h-96 animate-pulse border border-slate-100"></div>
+                  ))
+               ) : displayPosts.length > 0 ? (
+                  displayPosts.map((post, index) => (
+                    <BlogCard key={index} {...post} />
+                  ))
+               ) : (
+                  <div className="col-span-full py-20 text-center text-slate-400">
+                    No articles found. Check back later!
+                  </div>
+               )}
             </div>
 
             <div className="mt-16 text-center blog-fade-up">

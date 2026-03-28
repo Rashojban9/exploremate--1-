@@ -15,6 +15,7 @@ import {
   type GroupTripExpenseResponse, type BudgetSummary,
   type GroupTripMemberResponse,
 } from '../services/groupTripService';
+import { createSavedItem, getSavedItems, deleteSavedItem } from '../services/savedItemService';
 import { getStoredSession } from '../services/storageService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -64,6 +65,19 @@ const GroupPlanPage = ({ onNavigate }: { onNavigate: (page: string) => void }) =
   const [formExpenseAmount, setFormExpenseAmount] = useState('');
 
   const currentUserEmail = getStoredSession()?.user?.email || '';
+  // Track saved activities: map title → saved item id
+  const [savedMap, setSavedMap] = useState<Record<string, string | number>>({});
+
+  // Load saved items on mount to know which activities are already saved
+  useEffect(() => {
+    getSavedItems()
+      .then((items) => {
+        const map: Record<string, string | number> = {};
+        items.forEach((item) => { map[item.title] = item.id; });
+        setSavedMap(map);
+      })
+      .catch(() => {});
+  }, []);
 
   // ─── Data Loading ─────────────────────────────────────────────────────────
 
@@ -202,6 +216,33 @@ const GroupPlanPage = ({ onNavigate }: { onNavigate: (page: string) => void }) =
       setError(err.message);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSaveActivity = async (activity: GroupTripActivityResponse) => {
+    const existingId = savedMap[activity.title];
+    try {
+      if (existingId !== undefined) {
+        // Already saved → unsave
+        await deleteSavedItem(existingId);
+        setSavedMap((prev) => {
+          const next = { ...prev };
+          delete next[activity.title];
+          return next;
+        });
+      } else {
+        // Not saved → save
+        const created = await createSavedItem({
+            type: 'DESTINATION',
+            title: activity.title,
+            imageUrl: activity.imageUrl,
+            description: `Activity from group trip ${tripDetail?.trip?.tripName || 'Group Trip'}: $${activity.price}`,
+            location: tripDetail?.trip?.destination
+        });
+        setSavedMap((prev) => ({ ...prev, [activity.title]: created.id }));
+      }
+    } catch (error) {
+        console.error("Failed to toggle save", error);
     }
   };
 
@@ -550,6 +591,17 @@ const GroupPlanPage = ({ onNavigate }: { onNavigate: (page: string) => void }) =
                       <CheckCircle2 size={18} />
                     </button>
                   )}
+                  <button 
+                    onClick={() => handleSaveActivity(item)}
+                    className={`p-3 rounded-xl transition-all hover:scale-110 ${
+                      savedMap[item.title] !== undefined
+                        ? 'bg-rose-100 text-rose-500'
+                        : 'bg-rose-50 text-rose-500 hover:bg-rose-100'
+                    }`}
+                    title={savedMap[item.title] !== undefined ? 'Unsave' : 'Save to My Places'}
+                  >
+                    <Heart size={18} className={savedMap[item.title] !== undefined ? 'fill-rose-500' : ''} />
+                  </button>
                   {(isOwner || item.proposedByEmail === currentUserEmail) && (
                     <button onClick={() => handleDeleteActivity(item.id)} className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
                       <Trash2 size={18} />

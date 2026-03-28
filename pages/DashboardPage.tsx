@@ -4,6 +4,8 @@ import { MapPin, Languages, QrCode, Users, Bell, Sun, Moon, Compass, ArrowRight,
 import { Logo } from '../components/SharedUI';
 import { LOGIN_IMAGES } from '../assets/images';
 import { askAiSuggestion, getSessionId, getChatHistory } from '../services/aiService';
+import { getNotifications, Notification } from '../services/notificationService';
+import { getSavedItems, SavedItemResponse } from '../services/savedItemService';
 
 interface WeatherData {
   temp: number;
@@ -40,6 +42,9 @@ const DashboardPage = ({ onLogout, onNavigate, userName }: { onLogout: () => voi
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [recentMessages, setRecentMessages] = useState<{ role: string; text: string }[]>([]);
   const [showChatHistory, setShowChatHistory] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [savedItems, setSavedItems] = useState<SavedItemResponse[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const locationRef = useRef<{ lat: number, lon: number } | null>(null);
 
   // Load recent chat history on mount
@@ -60,8 +65,28 @@ const DashboardPage = ({ onLogout, onNavigate, userName }: { onLogout: () => voi
         console.log('No chat history found');
       }
     };
+
+    const loadData = async () => {
+      setIsLoadingData(true);
+      try {
+        const [notifs, saved] = await Promise.all([
+          getNotifications(),
+          getSavedItems()
+        ]);
+        setNotifications(notifs || []);
+        setSavedItems(saved || []);
+      } catch (error) {
+        console.error('Failed to load dashboard data', error);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
     loadRecentChat();
+    loadData();
   }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleAIGo = async () => {
     if (aiPrompt.trim()) {
@@ -193,9 +218,11 @@ const DashboardPage = ({ onLogout, onNavigate, userName }: { onLogout: () => voi
           >
             <span className="text-xs font-bold uppercase tracking-wider">Log Out</span>
           </button>
-          <button className="p-2 rounded-full bg-white border border-slate-100 text-slate-600 hover:text-sky-600 relative">
+          <button className="p-2 rounded-full bg-white border border-slate-100 text-slate-600 hover:text-sky-600 relative" onClick={() => onNavigate('profile')}>
             <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            )}
           </button>
           <button
             className="h-9 w-9 md:h-11 md:w-11 rounded-full bg-sky-400 p-[2px] cursor-pointer"
@@ -351,21 +378,33 @@ const DashboardPage = ({ onLogout, onNavigate, userName }: { onLogout: () => voi
               <button onClick={() => onNavigate('saved')} className="text-xs font-bold text-sky-600 hover:underline">View All</button>
             </div>
             <div className="space-y-4">
-              {[
-                { name: "Pokhara Lake", type: "Nature", img: LOGIN_IMAGES.POKHARA },
-                { name: "Everest Trek", type: "Adventure", img: LOGIN_IMAGES.EVEREST },
-                { name: "Boudha Stupa", type: "Heritage", img: LOGIN_IMAGES.BOUDHANATH }
-              ].map((item, i) => (
-                <div key={i} className="flex gap-4 p-2 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
-                    <img src={item.img} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              {isLoadingData ? (
+                Array(3).fill(0).map((_, i) => (
+                  <div key={i} className="flex gap-4 p-2 animate-pulse">
+                    <div className="w-14 h-14 rounded-xl bg-slate-100 italic"></div>
+                    <div className="flex flex-col justify-center gap-2">
+                       <div className="w-24 h-4 bg-slate-100 rounded"></div>
+                       <div className="w-16 h-3 bg-slate-100 rounded"></div>
+                    </div>
                   </div>
-                  <div className="flex flex-col justify-center">
-                    <h4 className="font-bold text-slate-800 text-sm">{item.name}</h4>
-                    <span className="text-[10px] uppercase font-bold text-slate-400">{item.type}</span>
+                ))
+              ) : savedItems.length > 0 ? (
+                savedItems.slice(0, 4).map((item, i) => (
+                  <div key={i} className="flex gap-4 p-2 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => onNavigate('saved')}>
+                    <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
+                      <img src={item.imageUrl || LOGIN_IMAGES.POKHARA} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      <h4 className="font-bold text-slate-800 text-sm">{item.title}</h4>
+                      <span className="text-[10px] uppercase font-bold text-slate-400">{item.type}</span>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-slate-400 text-sm">
+                  No saved items yet.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

@@ -230,12 +230,39 @@ export default function App() {
     };
   }, []);
 
-  // Hidden Master Access Gate (Admin)
+  // Simple Router to keep state in sync with URL paths
   useEffect(() => {
     const handleUrlGate = () => {
-      // Access via secret path or manual hash
-      if (window.location.pathname === '/master-control' || window.location.pathname === '/admin' || window.location.hash === '#admin') {
+      const path = window.location.pathname.replace(/^\/+/g, ''); // strip leading /
+      
+      // Admin/Auth paths
+      if (path === 'master-control' || path === 'admin' || window.location.hash === '#admin') {
         setView(isAdmin ? 'admin' : (isLoggedIn ? 'dashboard' : 'login'));
+        return;
+      }
+      
+      // Known view paths mapping
+      const viewMap: Record<string, ViewState> = {
+        'landing': 'landing',
+        'explore': 'landing',
+        'dashboard': 'dashboard',
+        'blog': 'blog',
+        'qr-guide': 'qr-guide',
+        'news': 'news',
+        'about': 'about',
+        'faq': 'faq',
+        'login': 'login',
+        'signup': 'signup',
+        'profile': 'profile',
+        'trips': 'trips',
+        'saved': 'saved',
+        'notifications': 'notifications',
+        'group-plan': 'group-plan',
+        'ai-suggestion': 'ai-suggestion'
+      };
+
+      if (viewMap[path]) {
+          setView(viewMap[path]);
       }
     };
     window.addEventListener('popstate', handleUrlGate);

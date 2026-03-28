@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ArrowLeft, Flashlight, Image as ImageIcon, MoreVertical, X, MapPin, Headphones, Box, History as HistoryIcon, Share2, ScanLine } from 'lucide-react';
-import { qrGuideService, QrArtifact, ScanHistory } from '../services/api';
+import { qrGuideService, QrArtifact, ScanHistory } from '../services/qrGuideService';
 
 const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -46,6 +46,22 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
     };
   }, []);
 
+  // Load History on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+        setIsLoadingHistory(true);
+        try {
+            const data = await qrGuideService.getUserHistory();
+            setHistory(data || []);
+        } catch (error) {
+            console.error("Failed to load scan history", error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+    loadHistory();
+  }, []);
+
   // Scanning Animation
   useEffect(() => {
     if (!scanning) return;
@@ -80,25 +96,6 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
     return () => ctx.revert();
   }, [scanning]);
 
-  // Load History
-  const loadHistory = async () => {
-    try {
-      setIsLoadingHistory(true);
-      const data = await qrGuideService.getUserHistory();
-      setHistory(data);
-    } catch (err) {
-      console.error('Failed to load history', err);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
-
-  useEffect(() => {
-     if (showHistory) {
-         loadHistory();
-     }
-  }, [showHistory]);
-
   // Handle Scan Simulation (With real backend call)
   const handleSimulateScan = async () => {
     if (!scanning || isScanningActive) return;
@@ -110,14 +107,17 @@ const QRGuidePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => 
     
     try {
         // We simulate scanning the QR code with ID "artifact-1"
-        // In a real device, this string comes from the QR decoder library
         const artificialId = "artifact-1"; 
         
         // 1. Fetch artifact details
         const artifactData = await qrGuideService.getArtifact(artificialId);
         
-        // 2. Record this scan silently
-        await qrGuideService.recordScan(artificialId).catch(e => console.error("History tracking failed", e));
+        // 2. Record this scan
+        await qrGuideService.recordScan(artificialId);
+        
+        // 3. Refresh history
+        const updatedHistory = await qrGuideService.getUserHistory();
+        setHistory(updatedHistory);
         
         setScanning(false);
         setResult(artifactData);

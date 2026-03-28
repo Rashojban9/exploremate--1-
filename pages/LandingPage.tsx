@@ -1,20 +1,32 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Sparkles, ArrowRight, MapPin, Star, Heart, Compass, Zap, Coins, ArrowRightLeft, RefreshCw, TrendingUp, ChevronUp } from 'lucide-react';
 import { Navbar, Footer } from '../components/Navigation';
 import { LOGIN_IMAGES, DESTINATION_IMAGES } from '../assets/images';
 import { contentService, type PageContent } from '../services/contentService';
+import { createSavedItem, getSavedItems, deleteSavedItem, type SavedItemResponse } from '../services/savedItemService';
+import { FAMOUS_PLACES } from '../data/famousPlaces';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const DestinationCard = ({ image, title, location, rating, price, index }: any) => (
+const DestinationCard = ({ image, title, location, rating, price, isSaved, onToggleSave }: any) => (
   <div className="destination-card group relative overflow-hidden rounded-[2.5rem] bg-white shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 hover-lift w-full border border-slate-100">
     <div className="relative h-64 sm:h-72 overflow-hidden rounded-t-[2.5rem]">
       <img src={image} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <button className="absolute top-4 right-4 p-3 glass-premium rounded-full hover:bg-white text-white hover:text-red-500 transition-all hover:scale-110">
-        <Heart size={20} className={index === 1 ? "fill-red-500 text-red-500" : ""} />
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSave();
+        }}
+        className={`absolute top-4 right-4 p-3 rounded-full transition-all hover:scale-110 ${
+          isSaved 
+            ? 'bg-white shadow-lg text-red-500' 
+            : 'glass-premium hover:bg-white text-white hover:text-red-500 group/heart'
+        }`}
+      >
+        <Heart size={20} className={isSaved ? "fill-red-500 text-red-500" : "group-hover/heart:fill-red-500"} />
       </button>
       <div className="absolute bottom-4 left-4 px-3 py-1.5 glass-card rounded-full flex items-center gap-1 text-xs font-bold text-slate-800 shadow-lg">
         <Star size={12} className="text-orange-400 fill-orange-400" /> {rating}
@@ -39,12 +51,73 @@ const DestinationCard = ({ image, title, location, rating, price, index }: any) 
 const LandingPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
   const [showAllLocations, setShowAllLocations] = useState(false);
   const [content, setContent] = useState<PageContent | null>(null);
+  // Track saved items: map title → saved item id for quick lookup
+  const [savedMap, setSavedMap] = useState<Record<string, string | number>>({});
+  const [savingInProgress, setSavingInProgress] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     contentService.getPageBySlug('home').then((data) => {
       if (data) setContent(data);
     });
   }, []);
+
+  // Load saved items on mount to know which are already liked
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setSavedMap({});
+      return;
+    }
+    getSavedItems()
+      .then((items) => {
+        const map: Record<string, string | number> = {};
+        items.forEach((item) => {
+          map[item.title] = item.id;
+        });
+        setSavedMap(map);
+      })
+      .catch(() => {
+        // silently fail — user just won't see pre-filled hearts
+      });
+  }, [isLoggedIn]);
+  
+  const handleToggleSave = useCallback(async (dest: any) => {
+    if (!isLoggedIn) {
+       onNavigate('login');
+       return;
+    }
+
+    // Prevent double-clicks
+    if (savingInProgress[dest.title]) return;
+    setSavingInProgress((prev) => ({...prev, [dest.title]: true}));
+
+    try {
+      const existingId = savedMap[dest.title];
+
+      if (existingId !== undefined) {
+        // Already saved → unlike (delete)
+        await deleteSavedItem(existingId);
+        setSavedMap((prev) => {
+          const next = { ...prev };
+          delete next[dest.title];
+          return next;
+        });
+      } else {
+        // Not saved → like (create)
+        const created = await createSavedItem({
+            type: 'DESTINATION',
+            title: dest.title,
+            location: dest.location,
+            imageUrl: dest.image,
+            description: `A top-rated destination in ${dest.location}`
+        });
+        setSavedMap((prev) => ({ ...prev, [dest.title]: created.id }));
+      }
+    } catch (error) {
+        console.error("Failed to toggle save", error);
+    } finally {
+      setSavingInProgress((prev) => ({...prev, [dest.title]: false}));
+    }
+  }, [isLoggedIn, savedMap, savingInProgress, onNavigate]);
 
   useEffect(() => {
     const tl = gsap.timeline();
@@ -89,11 +162,7 @@ const LandingPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) =>
 
   }, []);
 
-  const TRENDING = [
-    { title: "Everest Base Camp", location: "Solukhumbu", rating: "4.9", price: "1,400", image: DESTINATION_IMAGES.EVEREST },
-    { title: "Phewa Lake Boating", location: "Pokhara", rating: "4.8", price: "600", image: DESTINATION_IMAGES.POKHARA },
-    { title: "Boudhanath Stupa", location: "Kathmandu", rating: "4.9", price: "40", image: DESTINATION_IMAGES.KATHMANDU }
-  ];
+  const TRENDING = FAMOUS_PLACES.slice(0, 3);
 
   return (
     <div className="w-full relative bg-slate-50/50">
@@ -177,17 +246,22 @@ const LandingPage = ({ onNavigate, isLoggedIn }: { onNavigate: (page: string) =>
               <p className="text-slate-500 text-base md:text-lg max-w-md">{content?.contentBlocks?.section_desc || "Curated from high-fidelity local asset storage."}</p>
             </div>
             <button
-              onClick={() => setShowAllLocations(!showAllLocations)}
+              onClick={() => onNavigate('ai-suggestion')}
               className="px-6 py-3 bg-sky-50 text-sky-600 rounded-xl font-bold hover:bg-sky-100 flex items-center gap-2 group transition-all"
             >
-              {showAllLocations ? "Show Less" : "Explore All"} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              Explore AI Recommendations <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {TRENDING.map((dest, i) => (
               <div key={i} className="section-reveal">
-                <DestinationCard {...dest} index={i} />
+                <DestinationCard 
+                  {...dest} 
+                  index={i} 
+                  isSaved={savedMap[dest.title] !== undefined}
+                  onToggleSave={() => handleToggleSave(dest)} 
+                />
               </div>
             ))}
           </div>

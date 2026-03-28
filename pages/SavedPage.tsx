@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { gsap } from 'gsap';
-import { Trash2, MapPin, Calendar, ArrowRight, Heart, BookOpen, Plane, Grid, Compass, Mountain, User, Bell, X, Share2, Clock, Star, DollarSign, ExternalLink } from 'lucide-react';
-import { deleteSavedItem, listSavedItems, type SavedItemResponse, type SavedItemType } from '../services/api';
+import { Trash2, MapPin, Calendar, ArrowRight, Heart, BookOpen, Plane, Grid, Compass, Mountain, User, Bell, X, Share2, Clock, Star, DollarSign, ExternalLink, Sparkles, ChevronDown, Filter, Search } from 'lucide-react';
+import { deleteSavedItem, listSavedItems, createSavedItem, type SavedItemResponse, type SavedItemType } from '../services/api';
+import { FAMOUS_PLACES, type FamousPlace } from '../data/famousPlaces';
 
 type SavedItemUIType = 'destination' | 'itinerary' | 'article';
 
 interface SavedItemUI {
-  id: number;
+  id: number | string;
   type: SavedItemUIType;
   title: string;
   location?: string;
@@ -69,6 +70,20 @@ const mapSavedItemToUI = (item: SavedItemResponse): SavedItemUI => {
   return { ...base, author: 'ExploreMate', readTime: '5 min', tag: 'Guide' };
 };
 
+const CATEGORY_LABELS: Record<string, { label: string; icon: string }> = {
+  all: { label: 'All', icon: '🌍' },
+  trek: { label: 'Treks', icon: '🥾' },
+  temple: { label: 'Temples', icon: '🛕' },
+  lake: { label: 'Lakes', icon: '💧' },
+  park: { label: 'National Parks', icon: '🌿' },
+  adventure: { label: 'Adventure', icon: '🪂' },
+  nature: { label: 'Nature', icon: '🏔️' },
+  heritage: { label: 'Heritage', icon: '🏛️' },
+  city: { label: 'Cities', icon: '🏙️' },
+};
+
+const PLACES_PER_PAGE = 12;
+
 const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void, onNavigate: (page: string) => void, isLoggedIn?: boolean }) => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [savedItems, setSavedItems] = useState<SavedItemUI[]>([]);
@@ -78,10 +93,18 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  // Track which suggestion places are already saved (title → id)
+  const [savedSuggestionMap, setSavedSuggestionMap] = useState<Record<string, string | number>>({});
+  const [savingInProgress, setSavingInProgress] = useState<Record<string, boolean>>({});
+  // Discover section state
+  const [discoverCategory, setDiscoverCategory] = useState('all');
+  const [visibleCount, setVisibleCount] = useState(PLACES_PER_PAGE);
+  const [discoverSearch, setDiscoverSearch] = useState('');
 
   const loadSavedItems = useCallback(async () => {
     if (!isLoggedIn) {
       setSavedItems([]);
+      setSavedSuggestionMap({});
       setIsLoading(false);
       return;
     }
@@ -91,6 +114,10 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
     try {
       const items = await listSavedItems();
       setSavedItems(items.map(mapSavedItemToUI));
+      // Build suggestion map from loaded items
+      const map: Record<string, string | number> = {};
+      items.forEach((item) => { map[item.title] = item.id; });
+      setSavedSuggestionMap(map);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to load saved items.';
       setLoadError(message);
@@ -102,6 +129,46 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
   useEffect(() => {
     loadSavedItems();
   }, [loadSavedItems]);
+
+  const handleToggleSuggestion = useCallback(async (place: FamousPlace) => {
+    if (!isLoggedIn) {
+      onNavigate('login');
+      return;
+    }
+    if (savingInProgress[place.title]) return;
+    setSavingInProgress((prev) => ({ ...prev, [place.title]: true }));
+
+    try {
+      const existingId = savedSuggestionMap[place.title];
+      if (existingId !== undefined) {
+        // Already saved → unsave
+        await deleteSavedItem(existingId);
+        setSavedSuggestionMap((prev) => {
+          const next = { ...prev };
+          delete next[place.title];
+          return next;
+        });
+        // Remove from saved items list too
+        setSavedItems((prev) => prev.filter((item) => item.title !== place.title));
+      } else {
+        // Not saved → save
+        const created = await createSavedItem({
+          type: 'DESTINATION',
+          title: place.title,
+          location: place.location,
+          imageUrl: place.image,
+          description: place.description,
+        });
+        setSavedSuggestionMap((prev) => ({ ...prev, [place.title]: created.id }));
+        // Add to saved items list
+        setSavedItems((prev) => [...prev, mapSavedItemToUI(created)]);
+      }
+    } catch (error) {
+      console.error('Failed to toggle suggestion save', error);
+    } finally {
+      setSavingInProgress((prev) => ({ ...prev, [place.title]: false }));
+    }
+  }, [isLoggedIn, savedSuggestionMap, savingInProgress, onNavigate]);
 
   const filteredItems = activeFilter === 'all' 
     ? savedItems
@@ -213,7 +280,7 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
       }
   };
 
-  const handleDeleteSavedItem = async (itemId: number) => {
+  const handleDeleteSavedItem = async (itemId: number | string) => {
     if (!window.confirm('Remove this saved item?')) return;
 
     try {
@@ -406,12 +473,154 @@ const SavedPage = ({ onLogout, onNavigate, isLoggedIn }: { onLogout: () => void,
                         <Heart size={36} />
                     </div>
                     <h3 className="text-2xl font-bold text-slate-900 mb-3 font-display">Collection Empty</h3>
-                    <p className="text-slate-500 max-w-xs mx-auto mb-8">It looks like you haven't saved any items yet. Start exploring to build your dream collection.</p>
-                    <button onClick={() => onNavigate('landing')} className="px-8 py-3 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-600/20 hover:scale-105 active:scale-95 duration-200">
-                        Discover Places
-                    </button>
+                    <p className="text-slate-500 max-w-xs mx-auto mb-8">It looks like you haven't saved any items yet. Save famous places below to build your dream collection.</p>
                 </div>
             )}
+
+            {/* ─── Discover Famous Places Section ─── */}
+            {!isLoading && !loadError && (() => {
+              const filteredByCategory = discoverCategory === 'all' 
+                ? FAMOUS_PLACES 
+                : FAMOUS_PLACES.filter(p => p.category === discoverCategory);
+              
+              const categoryPlaces = discoverSearch 
+                ? filteredByCategory.filter(p => 
+                    p.title.toLowerCase().includes(discoverSearch.toLowerCase()) || 
+                    p.location.toLowerCase().includes(discoverSearch.toLowerCase())
+                  )
+                : filteredByCategory;
+
+              const visiblePlaces = categoryPlaces.slice(0, visibleCount);
+              const hasMore = visibleCount < categoryPlaces.length;
+
+              return (
+              <div className="mt-16">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20">
+                      <Sparkles size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-900">Discover Famous Places</h2>
+                      <p className="text-slate-500 text-sm">{categoryPlaces.length} destinations in Nepal — tap the heart to save</p>
+                    </div>
+                  </div>
+                  
+                  <div className="relative group max-w-md w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors" size={18} />
+                    <input 
+                      type="text" 
+                      placeholder="Search destinations or locations..."
+                      value={discoverSearch}
+                      onChange={(e) => { setDiscoverSearch(e.target.value); setVisibleCount(PLACES_PER_PAGE); }}
+                      className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Category Filter Tabs */}
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {Object.entries(CATEGORY_LABELS).map(([key, { label, icon }]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setDiscoverCategory(key); setVisibleCount(PLACES_PER_PAGE); }}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-1.5 ${
+                        discoverCategory === key
+                          ? 'bg-gradient-to-r from-sky-500 to-purple-600 text-white shadow-lg shadow-sky-500/20 scale-105'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md'
+                      }`}
+                    >
+                      <span>{icon}</span> {label}
+                      {key !== 'all' && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-md ${
+                          discoverCategory === key ? 'bg-white/20' : 'bg-slate-100'
+                        }`}>
+                          {FAMOUS_PLACES.filter(p => p.category === key).length}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {visiblePlaces.map((place) => {
+                    const isSaved = savedSuggestionMap[place.title] !== undefined;
+                    const isSaving = savingInProgress[place.title];
+                    return (
+                      <div
+                        key={place.title}
+                        className="group bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-2 transition-all duration-500"
+                      >
+                        <div className="relative h-48 overflow-hidden">
+                          <img
+                            src={place.image}
+                            alt={place.title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                          <button
+                            onClick={() => handleToggleSuggestion(place)}
+                            disabled={isSaving}
+                            className={`absolute top-3 right-3 p-2.5 rounded-full transition-all duration-300 hover:scale-110 ${
+                              isSaved
+                                ? 'bg-white shadow-lg text-red-500'
+                                : 'bg-black/20 backdrop-blur-sm text-white hover:bg-white hover:text-red-500'
+                            } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Heart size={18} className={isSaved ? 'fill-red-500 text-red-500' : ''} />
+                          </button>
+                          <div className="absolute top-3 left-3">
+                            <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-bold text-slate-600 uppercase tracking-wider shadow-sm">
+                              {CATEGORY_LABELS[place.category]?.icon} {CATEGORY_LABELS[place.category]?.label}
+                            </span>
+                          </div>
+                          <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                            <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-slate-800 flex items-center gap-1 shadow-sm">
+                              <Star size={10} className="text-amber-400 fill-amber-400" /> {place.rating}
+                            </span>
+                            <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-emerald-700 shadow-sm">
+                              {place.price}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-5">
+                          <h3 className="text-lg font-bold text-slate-900 font-display mb-1 group-hover:text-sky-600 transition-colors">
+                            {place.title}
+                          </h3>
+                          <div className="flex items-center gap-1 text-slate-500 text-xs font-medium mb-3">
+                            <MapPin size={12} className="text-sky-400" /> {place.location}
+                          </div>
+                          <p className="text-slate-500 text-sm leading-relaxed line-clamp-2">
+                            {place.description}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Show More / Show Less */}
+                <div className="flex justify-center mt-10">
+                  {hasMore ? (
+                    <button
+                      onClick={() => setVisibleCount((prev) => prev + PLACES_PER_PAGE)}
+                      className="px-8 py-3.5 bg-gradient-to-r from-sky-500 to-purple-600 text-white rounded-2xl font-bold hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2 shadow-lg shadow-sky-500/20"
+                    >
+                      <ChevronDown size={20} />
+                      Show More ({categoryPlaces.length - visibleCount} remaining)
+                    </button>
+                  ) : visibleCount > PLACES_PER_PAGE && (
+                    <button
+                      onClick={() => setVisibleCount(PLACES_PER_PAGE)}
+                      className="px-8 py-3.5 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:border-sky-300 hover:text-sky-600 transition-all duration-300 flex items-center gap-2"
+                    >
+                      Show Less
+                    </button>
+                  )}
+                </div>
+              </div>
+              );
+            })()}
         </div>
       </div>
 

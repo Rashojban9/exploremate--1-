@@ -122,7 +122,7 @@ export interface ApiTrip {
 
 /** @deprecated Use SavedItemResponse from savedItemService */
 export interface ApiSavedItem {
-  id: number;
+  id: number | string;
   type: ApiSavedItemType;
   title: string;
   location: string | null;

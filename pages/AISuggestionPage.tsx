@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
-import { ArrowLeft, Send, Sparkles, User, Bot, MapPin, Coffee, Compass, Camera, Trash2, StopCircle, Menu, X } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, User, Bot, MapPin, Coffee, Compass, Camera, Trash2, StopCircle, Menu, X, Heart } from 'lucide-react';
 import { askAiSuggestion, getSessionId, clearSession, getChatHistory, clearChatHistory } from '../services/aiService';
+import { createSavedItem, getSavedItems, deleteSavedItem } from '../services/savedItemService';
 import ChatSidebar from '../components/ChatSidebar';
 
 interface Message {
@@ -28,6 +29,19 @@ const AISuggestionPage = ({ onNavigate }: { onNavigate: (page: string) => void }
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Track saved suggestions: map title → saved item id
+  const [savedMap, setSavedMap] = useState<Record<string, string | number>>({});
+
+  // Load saved items on mount to track which suggestions are already saved
+  useEffect(() => {
+    getSavedItems()
+      .then((items) => {
+        const map: Record<string, string | number> = {};
+        items.forEach((item) => { map[item.title] = item.id; });
+        setSavedMap(map);
+      })
+      .catch(() => {});
+  }, []);
 
   // Load session and history on mount
   useEffect(() => {
@@ -224,6 +238,34 @@ const AISuggestionPage = ({ onNavigate }: { onNavigate: (page: string) => void }
     setIsLoading(false);
   };
 
+  const handleSaveSuggestion = async (text: string) => {
+    const suggestionTitle = text.split('\n')[0].substring(0, 50) || "AI Suggested Trip";
+    const existingId = savedMap[suggestionTitle];
+
+    try {
+      if (existingId !== undefined) {
+        // Already saved → unsave
+        await deleteSavedItem(existingId);
+        setSavedMap((prev) => {
+          const next = { ...prev };
+          delete next[suggestionTitle];
+          return next;
+        });
+      } else {
+        // Not saved → save
+        const created = await createSavedItem({
+            type: 'ITINERARY',
+            title: suggestionTitle,
+            description: text,
+            location: "Nepal"
+        });
+        setSavedMap((prev) => ({ ...prev, [suggestionTitle]: created.id }));
+      }
+    } catch (error) {
+        console.error("Failed to toggle save", error);
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -331,12 +373,30 @@ const AISuggestionPage = ({ onNavigate }: { onNavigate: (page: string) => void }
                   )}
                 </div>
                 <div className={`max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                  <div className={`px-5 py-3 rounded-2xl shadow-sm ${
+                  <div className={`px-5 py-3 rounded-2xl shadow-sm relative group ${
                     msg.role === 'user' 
                       ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white rounded-tr-md' 
                       : 'bg-white border border-slate-200 text-slate-800 rounded-tl-md'
                   }`}>
                     <p className="text-sm md:text-base whitespace-pre-wrap">{msg.text}</p>
+                    
+                    {msg.role === 'model' && msg.id !== 'welcome' && (() => {
+                      const suggestionTitle = msg.text.split('\n')[0].substring(0, 50) || "AI Suggested Trip";
+                      const isSaved = savedMap[suggestionTitle] !== undefined;
+                      return (
+                        <button 
+                          onClick={() => handleSaveSuggestion(msg.text)}
+                          className={`absolute -right-12 top-0 p-2 border rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${
+                            isSaved 
+                              ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100' 
+                              : 'bg-white border-slate-200 text-sky-600 hover:bg-sky-50'
+                          }`}
+                          title={isSaved ? 'Unsave' : 'Save to Trips'}
+                        >
+                          <Heart size={16} className={isSaved ? 'fill-red-500' : ''} />
+                        </button>
+                      );
+                    })()}
                   </div>
                   <span className="text-xs text-slate-400 mt-1.5 px-1 font-medium">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
