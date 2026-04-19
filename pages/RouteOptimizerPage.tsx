@@ -87,8 +87,12 @@ import { createTrip, type TripRequest } from '../services/tripService';
 interface POI {
   id: string;
   name: string;
-  type: 'hotel' | 'restaurant' | 'petrol';
+  type: 'hotel' | 'restaurant' | 'petrol' | 'ev_charging';
   coords: [number, number];
+  rating?: number;
+  phone?: string;
+  openNow?: boolean;
+  address?: string;
 }
 
 interface Waypoint {
@@ -126,8 +130,10 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
   const [poiFilters, setPoiFilters] = useState({
     hotel: true,
     restaurant: true,
-    petrol: true
+    petrol: true,
+    ev_charging: true
   });
+  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [loadingPois, setLoadingPois] = useState(false);
   
   // Routing state
@@ -354,46 +360,73 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
   }, []);
 
 
-  // Fetch POIs from OpenStreetMap
-  const fetchPOIs = async (lat: number, lon: number) => {
+  // Fetch POIs from OpenStreetMap — covers user location + full route corridor
+  const fetchPOIs = async (lat: number, lon: number, routeCoords?: [number, number][]) => {
       setLoadingPois(true);
       try {
+          // Build union of bboxes: user location + sample route points every ~10 stops
+          const samplePoints: {lat: number; lon: number}[] = [{ lat, lon }];
+          if (routeCoords && routeCoords.length > 0) {
+              const step = Math.max(1, Math.floor(routeCoords.length / 8));
+              routeCoords.filter((_, i) => i % step === 0).forEach(([rlat, rlon]) => {
+                  samplePoints.push({ lat: rlat, lon: rlon });
+              });
+          }
+
+          const radius = 2000; // 2 km around each sample point
+          const queryElements = samplePoints.map(p => `
+                node["tourism"~"hotel|motel|guest_house"](around:${radius},${p.lat},${p.lon});
+                node["amenity"~"restaurant|fast_food|cafe"](around:${radius},${p.lat},${p.lon});
+                node["amenity"="fuel"](around:${radius},${p.lat},${p.lon});
+                node["amenity"="charging_station"](around:${radius},${p.lat},${p.lon});
+          `).join('\n');
+
           const query = `
-              [out:json][timeout:25];
+              [out:json][timeout:30];
               (
-                node["tourism"="hotel"](around:5000,${lat},${lon});
-                node["amenity"="restaurant"](around:5000,${lat},${lon});
-                node["amenity"="fast_food"](around:5000,${lat},${lon});
-                node["amenity"="fuel"](around:5000,${lat},${lon});
+${queryElements}
               );
-              out body;
+              out body 120;
           `;
-          
+
           const response = await fetch('https://overpass-api.de/api/interpreter', {
               method: 'POST',
               body: query
           });
-          
+
           if (response.ok) {
               const data = await response.json();
-              const fetchedPois: POI[] = data.elements.map((el: any) => {
-                  let type: 'hotel' | 'restaurant' | 'petrol' = 'hotel';
-                  if (el.tags.amenity === 'restaurant' || el.tags.amenity === 'fast_food') {
-                      type = 'restaurant';
-                  } else if (el.tags.amenity === 'fuel') {
-                      type = 'petrol';
-                  } else if (el.tags.tourism === 'hotel') {
-                      type = 'hotel';
-                  }
-                  
-                  return {
-                      id: `poi-${el.id}`,
-                      name: el.tags.name || `${type.charAt(0).toUpperCase() + type.slice(1)}`,
-                      type,
-                      coords: [el.lat, el.lon] as [number, number]
-                  };
-              });
-              
+              const seen = new Set<string>();
+              const fetchedPois: POI[] = data.elements
+                  .filter((el: any) => el.lat && el.lon)
+                  .map((el: any) => {
+                      let type: POI['type'] = 'hotel';
+                      if (el.tags.amenity === 'charging_station') type = 'ev_charging';
+                      else if (el.tags.amenity === 'fuel') type = 'petrol';
+                      else if (el.tags.amenity === 'restaurant' || el.tags.amenity === 'fast_food' || el.tags.amenity === 'cafe') type = 'restaurant';
+                      else type = 'hotel';
+
+                      const key = `${el.lat.toFixed(4)},${el.lon.toFixed(4)}`;
+                      if (seen.has(key)) return null;
+                      seen.add(key);
+
+                      return {
+                          id: `poi-${el.id}`,
+                          name: el.tags.name || el.tags.brand || el.tags['operator'] ||
+                                (type === 'ev_charging' ? 'EV Charging' :
+                                 type === 'petrol' ? 'Petrol Station' :
+                                 type === 'restaurant' ? 'Restaurant' : 'Hotel'),
+                          type,
+                          coords: [el.lat, el.lon] as [number, number],
+                          phone: el.tags?.phone || el.tags?.['contact:phone'],
+                          address: el.tags?.['addr:street']
+                              ? `${el.tags['addr:street']} ${el.tags['addr:housenumber'] || ''}`.trim()
+                              : undefined,
+                          openNow: el.tags?.opening_hours?.includes('24/7') || undefined,
+                      } as POI;
+                  })
+                  .filter(Boolean) as POI[];
+
               setPois(fetchedPois);
           }
       } catch (error) {
@@ -511,6 +544,14 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
           setTotalDistance(route.distance);
           setTotalDuration(route.duration);
 
+          // Store alternative routes for map display
+          if (response.routes.length > 1) {
+            setAlternativeRoutes(response.routes.slice(1));
+          } else {
+            setAlternativeRoutes([]);
+          }
+          setSelectedRouteIndex(0);
+
           // Average speed
           const speedKmH = route.duration > 0 ? (route.distance / 1000) / (route.duration / 3600) : 0;
           setAverageSpeed(Math.round(speedKmH));
@@ -601,6 +642,11 @@ const RouteOptimizerPage = ({ onNavigate }: { onNavigate: (page: string) => void
             setModeComparison(stats);
             setIsFetchingModes(false);
           }).catch(() => setIsFetchingModes(false));
+
+          // 4) Refresh POIs along the whole route corridor
+          if (userLocation) {
+            fetchPOIs(userLocation[0], userLocation[1], geometry);
+          }
 
         } else {
           setRoutingError('Could not find a route. Please check your waypoints and try again.');
@@ -1113,11 +1159,36 @@ ${trkpts}
 
                       {/* ── Hero stats bar ── */}
                       <div className="bg-gradient-to-r from-sky-600 to-indigo-600 rounded-2xl p-4 text-white shadow-lg">
-                          <div className="flex items-center gap-2 mb-3">
+                          {/* Route summary header */}
+                          <div className="flex items-center gap-2 mb-1">
                               <div className="p-1 bg-emerald-400 rounded-full">
                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                               </div>
                               <span className="text-xs font-bold uppercase tracking-wider opacity-90">Route Optimized</span>
+                              {travelMode === 'driving' && <span className="ml-auto text-[9px] bg-white/15 px-2 py-0.5 rounded-full font-bold capitalize">{vehicleType}</span>}
+                          </div>
+                          {/* Route path summary */}
+                          <div className="text-[10px] font-medium opacity-70 mb-3 truncate">
+                              {waypoints[0]?.location?.split(',')[0]} → {waypoints.length > 2 && <span>{waypoints.length - 2} stop{waypoints.length > 3 ? 's' : ''} → </span>}{waypoints[waypoints.length - 1]?.location?.split(',')[0]}
+                          </div>
+                          {/* ETA row */}
+                          <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2 mb-3">
+                              <div className="text-center flex-1">
+                                  <div className="text-[8px] font-bold uppercase opacity-60">Depart</div>
+                                  <div className="text-sm font-black">{new Date(startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                              </div>
+                              <div className="flex items-center gap-1 text-white/40 px-2">
+                                  <div className="w-3 h-px bg-white/30"></div>
+                                  <Timer size={10} className="opacity-50"/>
+                                  <div className="text-[8px] font-bold opacity-60">{formatDuration(totalDuration)}</div>
+                                  <div className="w-3 h-px bg-white/30"></div>
+                              </div>
+                              <div className="text-center flex-1">
+                                  <div className="text-[8px] font-bold uppercase opacity-60">Arrive</div>
+                                  <div className="text-sm font-black text-emerald-300">
+                                      {new Date(new Date(startTime).getTime() + totalDuration * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                  </div>
+                              </div>
                           </div>
                           <div className={`grid ${liveSpeed != null && travelMode === 'driving' ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
                               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
@@ -1213,6 +1284,95 @@ ${trkpts}
                                       ))}
                                   </div>
                               )}
+                          </div>
+                      )}
+
+                      {/* ── Turn-by-Turn Directions ── */}
+                      {navigationSteps.length > 0 && (
+                          <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+                              <button
+                                  onClick={() => setShowNavigation(!showNavigation)}
+                                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+                              >
+                                  <span className="text-[10px] font-black uppercase text-slate-600 flex items-center gap-1.5">
+                                      <Gauge size={11}/> Directions
+                                      <span className="text-[8px] bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded-full">{navigationSteps.length}</span>
+                                  </span>
+                                  {showNavigation ? <ChevronUp size={12} className="text-slate-400"/> : <ChevronDown size={12} className="text-slate-400"/>}
+                              </button>
+                              {showNavigation && (
+                                  <div className="divide-y divide-slate-50 max-h-[300px] overflow-y-auto scrollbar-thin">
+                                      {navigationSteps.map((step, i) => {
+                                          const icon = step.maneuver?.modifier?.includes('left') ? '↰'
+                                              : step.maneuver?.modifier?.includes('right') ? '↱'
+                                              : step.maneuver?.modifier?.includes('straight') ? '↑'
+                                              : step.maneuver?.type === 'arrive' ? '🏁'
+                                              : step.maneuver?.type === 'depart' ? '🚀'
+                                              : step.maneuver?.type?.includes('roundabout') ? '🔄'
+                                              : '→';
+                                          return (
+                                              <div key={i} className="px-4 py-2.5 hover:bg-sky-50/50 transition-colors flex items-start gap-3">
+                                                  <div className="w-7 h-7 rounded-lg bg-slate-100 flex-shrink-0 flex items-center justify-center text-sm">
+                                                      {icon}
+                                                  </div>
+                                                  <div className="flex-grow min-w-0">
+                                                      <div className="text-[11px] text-slate-700 font-semibold capitalize leading-tight">
+                                                          {step.instruction}
+                                                      </div>
+                                                      {step.name && <div className="text-[10px] text-slate-400 font-medium truncate">{step.name}</div>}
+                                                  </div>
+                                                  <div className="text-right flex-shrink-0">
+                                                      <div className="text-[10px] font-black text-slate-600">{formatDistance(step.distance)}</div>
+                                                      <div className="text-[9px] text-slate-400">{formatDuration(step.duration)}</div>
+                                                  </div>
+                                              </div>
+                                          );
+                                      })}
+                                  </div>
+                              )}
+                          </div>
+                      )}
+
+
+                      {/* Itinerary Timeline */}
+                      {itinerary.length > 1 && (
+                          <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+                              <div className="px-4 py-3 border-b border-slate-50">
+                                  <span className="text-[10px] font-black uppercase text-slate-600 flex items-center gap-1.5"><Clock size={11}/> Trip Timeline</span>
+                              </div>
+                              <div className="relative pl-8 pr-4 py-2">
+                                  {/* Vertical timeline line */}
+                                  <div className="absolute left-[18px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-emerald-400 via-sky-400 to-red-400 rounded-full" />
+                                  {itinerary.map((item, i) => {
+                                      const isFirst = i === 0;
+                                      const isLast = i === itinerary.length - 1;
+                                      const dotColor = isFirst ? '#22c55e' : isLast ? '#ef4444' : '#0284c7';
+                                      return (
+                                          <div key={i} className="relative py-2.5">
+                                              {/* Dot */}
+                                              <div className="absolute -left-[14px] top-3 w-3 h-3 rounded-full border-2 border-white shadow-sm" style={{background: dotColor}} />
+                                              <div className="flex items-start justify-between gap-2">
+                                                  <div className="min-w-0">
+                                                      <div className="text-[11px] font-bold text-slate-700 truncate">{item.location.split(',')[0]}</div>
+                                                      {item.stayTimeMinutes > 0 && (
+                                                          <div className="text-[9px] text-amber-600 font-bold mt-0.5">Stay: {item.stayTimeMinutes} min</div>
+                                                      )}
+                                                  </div>
+                                                  <div className="text-right flex-shrink-0">
+                                                      <div className="text-[10px] font-black text-sky-600">
+                                                          {item.arrivalTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                                      </div>
+                                                      {!isFirst && !isLast && item.departureTime.getTime() !== item.arrivalTime.getTime() && (
+                                                          <div className="text-[9px] text-slate-400">
+                                                              Dep {item.departureTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                                          </div>
+                                                      )}
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      );
+                                  })}
+                              </div>
                           </div>
                       )}
 
@@ -1567,21 +1727,64 @@ ${trkpts}
                    />
                )}
 
-               {/* POI Markers */}
-               {showPois && pois.filter(p => poiFilters[p.type]).map((poi) => (
-                   <Marker 
-                       key={poi.id} 
-                       position={poi.coords}
-                       icon={poi.type === 'hotel' ? hotelIcon : poi.type === 'restaurant' ? restaurantIcon : petrolIcon}
-                   >
-                       <Popup>
-                           <div className="text-center font-sans min-w-[120px]">
-                               <p className="font-bold text-slate-800">{poi.name}</p>
-                               <p className="text-xs text-slate-500 capitalize">{poi.type}</p>
-                           </div>
-                       </Popup>
-                   </Marker>
-               ))}
+               {/* POI Markers — Google Maps-style */}
+               {pois.filter(p => poiFilters[p.type]).map((poi) => {
+                   const cfg = poi.type === 'hotel'
+                       ? { bg: '#f59e0b', icon: '🏨', label: 'Hotel' }
+                       : poi.type === 'restaurant'
+                       ? { bg: '#f97316', icon: '🍴', label: 'Food' }
+                       : poi.type === 'ev_charging'
+                       ? { bg: '#0ea5e9', icon: '⚡', label: 'EV Charger' }
+                       : { bg: '#22c55e', icon: '⛽', label: 'Petrol' };
+
+                   return (
+                       <Marker
+                           key={poi.id}
+                           position={poi.coords}
+                           icon={L.divIcon({
+                               className: '',
+                               html: `<div style="
+                                   background:${cfg.bg};
+                                   width:30px;height:30px;border-radius:50% 50% 50% 0;
+                                   transform:rotate(-45deg);
+                                   border:2px solid white;
+                                   box-shadow:0 2px 8px rgba(0,0,0,0.3);
+                                   display:flex;align-items:center;justify-content:center;
+                               ">
+                                   <span style="transform:rotate(45deg);font-size:13px;line-height:1">${cfg.icon}</span>
+                               </div>`,
+                               iconSize: [30, 30],
+                               iconAnchor: [10, 30],
+                               popupAnchor: [5, -30],
+                           })}
+                       >
+                           <Popup>
+                               <div style={{fontFamily:'sans-serif',minWidth:'160px',maxWidth:'200px'}}>
+                                   <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'6px'}}>
+                                       <span style={{fontSize:'18px'}}>{cfg.icon}</span>
+                                       <div>
+                                           <div style={{fontWeight:'800',fontSize:'12px',color:'#1e293b',lineHeight:'1.2'}}>{poi.name}</div>
+                                           <span style={{fontSize:'9px',fontWeight:'700',textTransform:'uppercase',background:cfg.bg,color:'white',borderRadius:'4px',padding:'1px 5px'}}>{cfg.label}</span>
+                                       </div>
+                                       {poi.openNow && <span style={{marginLeft:'auto',fontSize:'9px',fontWeight:'700',color:'#16a34a',background:'#dcfce7',borderRadius:'4px',padding:'1px 5px'}}>24/7</span>}
+                                   </div>
+                                   {poi.address && <div style={{fontSize:'10px',color:'#64748b',marginBottom:'3px'}}>📍 {poi.address}</div>}
+                                   {poi.phone && <div style={{fontSize:'10px',color:'#64748b'}}>📞 {poi.phone}</div>}
+                                   <div style={{marginTop:'8px',display:'flex',gap:'6px'}}>
+                                       <a href={`https://www.google.com/maps/search/?api=1&query=${poi.coords[0]},${poi.coords[1]}`} target="_blank" rel="noreferrer"
+                                           style={{flex:1,textAlign:'center',fontSize:'10px',fontWeight:'700',padding:'4px',background:'#0284c7',color:'white',borderRadius:'6px',textDecoration:'none'}}>
+                                           Directions
+                                       </a>
+                                       <a href={`https://www.google.com/maps/place/?q=place_api&ftid=${poi.coords[0]},${poi.coords[1]}`} target="_blank" rel="noreferrer"
+                                           style={{flex:1,textAlign:'center',fontSize:'10px',fontWeight:'700',padding:'4px',background:'#f1f5f9',color:'#475569',borderRadius:'6px',textDecoration:'none'}}>
+                                           Details
+                                       </a>
+                                   </div>
+                               </div>
+                           </Popup>
+                       </Marker>
+                   );
+               })}
                
                {/* Live GPS Beacon — pulsing blue dot at user's actual position */}
                {userLocation && (
@@ -1648,12 +1851,44 @@ ${trkpts}
                    );
                })}
 
-               {/* Route Polyline */}
+               {/* Alternative Route Polylines (dashed, clickable) */}
+               {isOptimized && alternativeRoutes.map((altRoute, idx) => {
+                   const altGeo: [number, number][] = altRoute.geometry.coordinates.map(
+                       (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
+                   );
+                   return (
+                       <Polyline
+                           key={`alt-${idx}`}
+                           positions={altGeo}
+                           pathOptions={{ color: '#94a3b8', weight: 4, opacity: 0.5, dashArray: '8 6', lineCap: 'round' }}
+                           eventHandlers={{
+                               click: () => {
+                                   // Switch to this alternative route
+                                   setRouteGeometry(altGeo);
+                                   setTotalDistance(altRoute.distance);
+                                   setTotalDuration(altRoute.duration);
+                                   const speedKmH = altRoute.duration > 0 ? (altRoute.distance / 1000) / (altRoute.duration / 3600) : 0;
+                                   setAverageSpeed(Math.round(speedKmH));
+                               }
+                           }}
+                       />
+                   );
+               })}
+
+               {/* Main Route Polyline — with shadow outline */}
                {isOptimized && routeGeometry.length > 0 && (
-                   <Polyline
-                       positions={routeGeometry}
-                       pathOptions={{ color: '#0284c7', weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }}
-                   />
+                   <>
+                       {/* Shadow/outline for depth */}
+                       <Polyline
+                           positions={routeGeometry}
+                           pathOptions={{ color: '#0369a1', weight: 8, opacity: 0.3, lineCap: 'round', lineJoin: 'round' }}
+                       />
+                       {/* Main route line */}
+                       <Polyline
+                           positions={routeGeometry}
+                           pathOptions={{ color: '#0284c7', weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }}
+                       />
+                   </>
                )}
 
                {/* Auto-fit bounds to the full route after optimization */}
@@ -1662,41 +1897,47 @@ ${trkpts}
                )}
           </LeafletMap>
 
-          {/* POI Filter Controls */}
-          <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md p-2 rounded-xl border border-white/50 shadow-lg z-[400] flex flex-col gap-1">
-              <button 
-                  onClick={() => setShowPois(!showPois)}
-                  className={`p-2 rounded-lg transition-colors ${showPois ? 'bg-sky-100 text-sky-600' : 'text-slate-400 hover:bg-slate-100'}`}
-                  title="Toggle POIs"
+          {/* Google Maps-style horizontal POI chip bar */}
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-white/95 backdrop-blur-md rounded-2xl px-3 py-2 shadow-xl border border-white/60">
+              {([
+                  { key: 'hotel' as const,       label: 'Hotels',     icon: <Hotel size={13}/>,     activeBg: 'bg-amber-500',  count: pois.filter(p=>p.type==='hotel').length },
+                  { key: 'restaurant' as const,  label: 'Food',       icon: <Utensils size={13}/>,  activeBg: 'bg-orange-500', count: pois.filter(p=>p.type==='restaurant').length },
+                  { key: 'petrol' as const,      label: 'Petrol',     icon: <Fuel size={13}/>,      activeBg: 'bg-green-600',  count: pois.filter(p=>p.type==='petrol').length },
+                  { key: 'ev_charging' as const, label: 'EV Charge',  icon: <Zap size={13}/>,       activeBg: 'bg-sky-500',    count: pois.filter(p=>p.type==='ev_charging').length },
+              ]).map(chip => (
+                  <button
+                      key={chip.key}
+                      onClick={() => setPoiFilters(f => ({...f, [chip.key]: !f[chip.key]}))}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all ${
+                          poiFilters[chip.key]
+                              ? `${chip.activeBg} text-white shadow-md scale-105`
+                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                  >
+                      {chip.icon}
+                      <span>{chip.label}</span>
+                      {chip.count > 0 && (
+                          <span className={`text-[9px] font-black px-1 py-0.5 rounded-full ${poiFilters[chip.key] ? 'bg-white/30' : 'bg-slate-300 text-slate-600'}`}>
+                              {chip.count}
+                          </span>
+                      )}
+                  </button>
+              ))}
+              {/* Traffic chip separator */}
+              <div className="w-px h-5 bg-slate-200" />
+              <button
+                  onClick={() => setShowTrafficLayer(t => !t)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all ${
+                      showTrafficLayer ? 'bg-red-500 text-white shadow-md scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
               >
-                  <Search size={18} />
+                  <span className="relative flex h-2 w-2">
+                      {showTrafficLayer && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>}
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${showTrafficLayer ? 'bg-white' : 'bg-red-400'}`}></span>
+                  </span>
+                  Traffic
               </button>
-              
-              {showPois && (
-                  <>
-                      <button 
-                          onClick={() => setPoiFilters(f => ({...f, hotel: !f.hotel}))}
-                          className={`p-2 rounded-lg transition-colors ${poiFilters.hotel ? 'bg-amber-100 text-amber-600' : 'text-slate-300'}`}
-                          title="Hotels"
-                      >
-                          <Hotel size={18} />
-                      </button>
-                      <button 
-                          onClick={() => setPoiFilters(f => ({...f, restaurant: !f.restaurant}))}
-                          className={`p-2 rounded-lg transition-colors ${poiFilters.restaurant ? 'bg-orange-100 text-orange-600' : 'text-slate-300'}`}
-                          title="Restaurants"
-                      >
-                          <Utensils size={18} />
-                      </button>
-                      <button 
-                          onClick={() => setPoiFilters(f => ({...f, petrol: !f.petrol}))}
-                          className={`p-2 rounded-lg transition-colors ${poiFilters.petrol ? 'bg-green-100 text-green-600' : 'text-slate-300'}`}
-                          title="Petrol Pumps"
-                      >
-                          <Fuel size={18} />
-                      </button>
-                  </>
-              )}
+              {loadingPois && <div className="w-3 h-3 border-2 border-sky-300/40 border-t-sky-500 rounded-full animate-spin ml-1"/>}
           </div>
 
           {/* Loading POIs indicator */}
@@ -1707,13 +1948,32 @@ ${trkpts}
               </div>
           )}
 
-          {/* Map Controls Overlay */}
-          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-2 rounded-xl border border-white/50 shadow-lg z-[400] flex flex-col gap-2">
-              <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="Zoom In">
-                  <Plus size={20} />
+          {/* Map Controls Overlay — right side */}
+          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-white/60 shadow-lg z-[400] flex flex-col gap-1">
+              {/* GPS recenter */}
+              <button
+                  onClick={() => { if (userLocation) { setMapCenter([...userLocation]); } }}
+                  className={`p-2 rounded-lg transition-colors ${gpsStatus === 'locked' ? 'text-sky-600 hover:bg-sky-50' : 'text-slate-300'}`}
+                  title="Re-center on my location"
+              >
+                  <Navigation size={17} />
               </button>
-              <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="Settings">
-                   <Settings size={20} />
+              <div className="w-full h-px bg-slate-100" />
+              {/* Refresh POIs */}
+              <button
+                  onClick={() => { if (userLocation) fetchPOIs(userLocation[0], userLocation[1], routeGeometry); }}
+                  className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+                  title="Refresh places"
+              >
+                  <RefreshCcw size={17} className={loadingPois ? 'animate-spin' : ''} />
+              </button>
+              {/* Settings */}
+              <button
+                  onClick={() => setShowAdvancedOptions(v => !v)}
+                  className={`p-2 rounded-lg transition-colors ${showAdvancedOptions ? 'bg-sky-100 text-sky-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                  title="Advanced Options"
+              >
+                  <Settings size={17} />
               </button>
           </div>
 
@@ -1782,28 +2042,5 @@ const Check = ({ size, className }: { size: number, className?: string }) => (
         <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
 );
-
-// Custom POI Icons
-const hotelIcon = new L.Icon({
-    iconUrl: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f59e0b" width="32" height="32"><path d="M19 9.5V5a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v4.5a1 1 0 0 0 .5.866l5 3a1 1 0 0 0 1 0l5-3A1 1 0 0 0 19 9.5zM5 18a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm14-1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`),
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32]
-});
-
-const restaurantIcon = new L.Icon({
-    iconUrl: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f97316" width="32" height="32"><path d="M12 2C8.5 2 6 4.5 6 7.5c0 1.5.5 2.8 1.3 3.8L6 18h12l-1.3-6.7C17.5 10.3 18 9 18 7.5 18 4.5 15.5 2 12 2zM8 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`),
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32]
-});
-
-const petrolIcon = new L.Icon({
-    iconUrl: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#22c55e" width="32" height="32"><path d="M19 5h-2V3H7v2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-6H8V8h6v4z"/></svg>`),
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32]
-});
-
 
 export default RouteOptimizerPage;

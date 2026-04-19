@@ -1,4 +1,4 @@
-import { get, put } from './http';
+import { get, put, post, del } from './http';
 
 export interface PageContent {
   slug: string;
@@ -33,7 +33,16 @@ export const contentService = {
     return await get<PageContent[]>('/api/content/admin/pages', true);
   },
 
+  createPage: async (data: Partial<PageContent>): Promise<PageContent> => {
+    return await post<PageContent>('/api/content/admin/pages', data, true);
+  },
+
   updatePageContent: async (slug: string, data: Partial<PageContent>): Promise<PageContent> => {
     return await put<PageContent>(`/api/content/admin/pages/${slug}`, data, true);
+  },
+
+  deletePage: async (slug: string): Promise<void> => {
+    await del<void>(`/api/content/admin/pages/${slug}`, true);
   }
 };
+

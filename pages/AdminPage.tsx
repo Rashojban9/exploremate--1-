@@ -1,11 +1,14 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { Shield, Users, Activity, LogOut, ArrowLeft, RefreshCw, Trash2, Edit, AlertTriangle, CheckCircle, Database, Server, Globe, Search, Filter, Image, FileText, Settings, Upload, UserPlus, ShieldCheck, DollarSign, MapPin, Newspaper, Calendar, Menu, Link, ToggleLeft } from 'lucide-react';
+import { Shield, Users, Activity, LogOut, ArrowLeft, RefreshCw, Trash2, Edit, AlertTriangle, CheckCircle, Database, Server, Globe, Search, Filter, Image, FileText, Settings, Upload, UserPlus, ShieldCheck, DollarSign, MapPin, Newspaper, Calendar, Menu, Link, ToggleLeft, X, Eye, EyeOff, Ban, Check } from 'lucide-react';
 import { AdvancedButton, Badge, Tabs, Avatar, LoadingSpinner } from '../components/NotificationSystem';
 import { GlowBorder, AnimatedCounter, RevealOnScroll } from '../components/AdvancedAnimations';
 import { contentService, type PageContent } from '../services/contentService';
 import { getAllUsers, type ProfileResponse } from '../services/authService';
+import { getAdminStats, getContentStats, updateUser as adminUpdateUser, deleteUser as adminDeleteUser, getAllMedia, addMedia, updateMedia, deleteMedia, type AdminStats, type ContentStats, type MediaItem } from '../services/adminService';
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
 
 const StatCard = ({ label, value, change, icon: Icon, color, delay }: any) => (
   <RevealOnScroll direction="up" delay={delay}>
@@ -15,17 +18,17 @@ const StatCard = ({ label, value, change, icon: Icon, color, delay }: any) => (
           <div>
             <p className="text-slate-500 text-sm font-medium mb-1">{label}</p>
             <div className="text-3xl font-bold text-slate-900">
-              {isNaN(Number(value)) ? value : <AnimatedCounter end={parseFloat(value.replace(/[^0-9.]/g, ''))} suffix={value.includes('%') ? '%' : ''} />}
+              {typeof value === 'number' ? <AnimatedCounter end={value} /> : value}
             </div>
             <span className={`text-xs font-bold mt-2 inline-flex items-center gap-1 ${
               change === 'Stable' || change === 'Low' ? 'text-emerald-600' : 
-              change.includes('+') ? 'text-sky-600' : 'text-slate-400'
+              change.includes && change.includes('+') ? 'text-sky-600' : 'text-slate-400'
             }`}>
               {change === 'Stable' || change === 'Low' ? <CheckCircle size={12} /> : null}
               {change}
             </span>
           </div>
-          <div className={`w-12 h-12 rounded-xl bg-${color}/10 flex items-center justify-center`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center`} style={{ backgroundColor: 'rgba(14, 165, 233, 0.1)' }}>
             <Icon className={`w-6 h-6 ${color}`} />
           </div>
         </div>
@@ -34,7 +37,9 @@ const StatCard = ({ label, value, change, icon: Icon, color, delay }: any) => (
   </RevealOnScroll>
 );
 
-const UserRow = ({ user, index }: { user: ProfileResponse; index: number }) => (
+// ─── User Row ─────────────────────────────────────────────────────────────────
+
+const UserRow = ({ user, index, onEdit, onDelete }: { user: ProfileResponse; index: number; onEdit: (user: ProfileResponse) => void; onDelete: (user: ProfileResponse) => void }) => (
   <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-sky-50 transition-colors group animate-slide-up" style={{ animationDelay: `${index * 0.05}s` }}>
     <div className="flex items-center gap-4">
       <Avatar alt={user.name} size="md" status={'online'} />
@@ -48,36 +53,106 @@ const UserRow = ({ user, index }: { user: ProfileResponse; index: number }) => (
         Active
       </Badge>
       <span className="text-xs font-bold text-slate-400 uppercase">{user.role || 'USER'}</span>
-      <span className="text-xs text-slate-400">Synced</span>
+      <span className="text-xs text-slate-400">
+        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Synced'}
+      </span>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="p-2 hover:bg-white rounded-lg transition-colors">
-          <Edit size={16} className="text-slate-400" />
+        <button onClick={() => onEdit(user)} className="p-2 hover:bg-white rounded-lg transition-colors" title="Edit user">
+          <Edit size={16} className="text-slate-400 hover:text-sky-500" />
         </button>
-        <button className="p-2 hover:bg-white rounded-lg transition-colors">
-          <Trash2 size={16} className="text-red-400" />
+        <button onClick={() => onDelete(user)} className="p-2 hover:bg-white rounded-lg transition-colors" title="Delete user">
+          <Trash2 size={16} className="text-red-400 hover:text-red-600" />
         </button>
       </div>
     </div>
   </div>
 );
 
+// ─── Modal ────────────────────────────────────────────────────────────────────
+
+const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-slide-up overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+            <X size={20} className="text-slate-400" />
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main AdminPage ───────────────────────────────────────────────────────────
+
 const AdminPage = ({ onBack }: { onBack: () => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState('users');
+
+  // Users state
+  const [users, setUsers] = useState<ProfileResponse[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+  // User edit modal
+  const [editingUser, setEditingUser] = useState<ProfileResponse | null>(null);
+  const [editRole, setEditRole] = useState('USER');
+  const [isSavingUser, setIsSavingUser] = useState(false);
+
+  // User delete modal
+  const [deletingUser, setDeletingUser] = useState<ProfileResponse | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+
+  // Pages state
   const [pages, setPages] = useState<PageContent[]>([]);
   const [isLoadingPages, setIsLoadingPages] = useState(false);
   const [editingPage, setEditingPage] = useState<PageContent | null>(null);
+  const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const [deletingPageSlug, setDeletingPageSlug] = useState<string | null>(null);
 
-  const [roles, setRoles] = useState<any[]>([]);
-  const [selectedRole, setSelectedRole] = useState<any | null>(null);
+  // Media state
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
+  const [isSavingMedia, setIsSavingMedia] = useState(false);
+  const [deletingMedia, setDeletingMedia] = useState<MediaItem | null>(null);
+  const [isDeletingMedia, setIsDeletingMedia] = useState(false);
 
-  // --- Settings State ---
+  // Stats state
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [contentStats, setContentStats] = useState<ContentStats | null>(null);
+
+  // Settings State
   const [systemSettings, setSystemSettings] = useState({
     maintenanceMode: false,
     emailNotifications: true,
     analyticsTracking: false
   });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // ─── Load Stats ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const [authStats, cStats] = await Promise.allSettled([
+          getAdminStats(),
+          getContentStats()
+        ]);
+        if (authStats.status === 'fulfilled') setAdminStats(authStats.value);
+        if (cStats.status === 'fulfilled') setContentStats(cStats.value);
+      } catch (e) {
+        console.error('Failed to load stats', e);
+      }
+    };
+    loadStats();
+  }, []);
 
   // Load backend content settings
   useEffect(() => {
@@ -121,10 +196,11 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
     }
   };
 
-  // --- Load Initial Content Data ---b is selected
+  // ─── Load Data on Tab Change ──────────────────────────────────────────────
   useEffect(() => {
     if (activeTab === 'pages') loadPages();
     if (activeTab === 'users') loadUsers();
+    if (activeTab === 'media') loadMedia();
   }, [activeTab]);
 
   const loadPages = async () => {
@@ -151,17 +227,126 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
     }
   };
 
+  // ─── User CRUD ────────────────────────────────────────────────────────────
+  const handleEditUser = (user: ProfileResponse) => {
+    setEditingUser(user);
+    setEditRole(user.role || 'USER');
+  };
+
+  const handleSaveUserEdit = async () => {
+    if (!editingUser?.id) return;
+    setIsSavingUser(true);
+    try {
+      await adminUpdateUser(editingUser.id, { role: editRole });
+      setEditingUser(null);
+      loadUsers();
+      // Refresh stats
+      const stats = await getAdminStats();
+      setAdminStats(stats);
+    } catch (e) {
+      console.error('Failed to update user', e);
+    } finally {
+      setIsSavingUser(false);
+    }
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!deletingUser?.id) return;
+    setIsDeletingUser(true);
+    try {
+      await adminDeleteUser(deletingUser.id);
+      setDeletingUser(null);
+      loadUsers();
+      const stats = await getAdminStats();
+      setAdminStats(stats);
+    } catch (e) {
+      console.error('Failed to delete user', e);
+    } finally {
+      setIsDeletingUser(false);
+    }
+  };
+
+  // ─── Page CRUD ────────────────────────────────────────────────────────────
   const handleSavePage = async () => {
     if (!editingPage) return;
     try {
-      await contentService.updatePageContent(editingPage.slug, editingPage);
+      if (editingPage.updatedAt === '') {
+        // New page
+        await contentService.createPage(editingPage);
+      } else {
+        await contentService.updatePageContent(editingPage.slug, editingPage);
+      }
       setEditingPage(null);
       loadPages();
+      const cStats = await getContentStats();
+      setContentStats(cStats);
     } catch (e) {
       console.error('Failed to save page', e);
     }
   };
 
+  const handleDeletePage = async (slug: string) => {
+    setDeletingPageSlug(slug);
+    setIsDeletingPage(true);
+    try {
+      await contentService.deletePage(slug);
+      loadPages();
+      const cStats = await getContentStats();
+      setContentStats(cStats);
+    } catch (e) {
+      console.error('Failed to delete page', e);
+    } finally {
+      setIsDeletingPage(false);
+      setDeletingPageSlug(null);
+    }
+  };
+
+  // ─── Media CRUD ───────────────────────────────────────────────────────────
+  const loadMedia = async () => {
+    setIsLoadingMedia(true);
+    try {
+      const data = await getAllMedia();
+      setMediaItems(data);
+    } catch (e) {
+      console.error('Failed to load media', e);
+    } finally {
+      setIsLoadingMedia(false);
+    }
+  };
+
+  const handleSaveMedia = async () => {
+    if (!editingMedia) return;
+    setIsSavingMedia(true);
+    try {
+      if (editingMedia.id) {
+        await updateMedia(editingMedia.id, editingMedia);
+      } else {
+        await addMedia(editingMedia);
+      }
+      setEditingMedia(null);
+      loadMedia();
+    } catch (e) {
+      console.error('Failed to save media', e);
+    } finally {
+      setIsSavingMedia(false);
+    }
+  };
+
+  const handleConfirmDeleteMedia = async () => {
+    if (!deletingMedia?.id) return;
+    setIsDeletingMedia(true);
+    try {
+      await deleteMedia(deletingMedia.id);
+      setDeletingMedia(null);
+      loadMedia();
+    } catch (e) {
+      console.error('Failed to delete media', e);
+    } finally {
+      setIsDeletingMedia(false);
+    }
+  };
+
+  // ─── Animations ───────────────────────────────────────────────────────────
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo('.admin-panel', 
@@ -176,26 +361,36 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
     return () => ctx.revert();
   }, []);
 
+  // ─── Computed Values ──────────────────────────────────────────────────────
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = userSearch === '' || 
+      u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
+      u.email?.toLowerCase().includes(userSearch.toLowerCase());
+    const matchesRole = userRoleFilter === 'all' || u.role?.toUpperCase() === userRoleFilter.toUpperCase();
+    return matchesSearch && matchesRole;
+  });
+
   const stats = [
-    { label: 'System Users', value: '4,129', change: '+8%', icon: Users, color: 'text-sky-500', delay: 0 },
-    { label: 'Network Uptime', value: '100%', change: 'Stable', icon: Activity, color: 'text-emerald-500', delay: 0.1 },
-    { label: 'Compute Load', value: '18%', change: 'Low', icon: Server, color: 'text-orange-500', delay: 0.2 },
+    { label: 'System Users', value: adminStats?.totalUsers ?? 0, change: `${adminStats?.adminCount ?? 0} admins`, icon: Users, color: 'text-sky-500', delay: 0 },
+    { label: 'Active Pages', value: contentStats?.totalPages ?? 0, change: `${contentStats?.publishedCount ?? 0} published`, icon: FileText, color: 'text-emerald-500', delay: 0.1 },
+    { label: 'Network Uptime', value: '100%', change: 'Stable', icon: Activity, color: 'text-orange-500', delay: 0.2 },
     { label: 'Secure Storage', value: '1.2TB', change: '82%', icon: Database, color: 'text-purple-500', delay: 0.3 },
   ];
-  
-  const ROLES = [
-    { name: 'Super Admin', users: 2, perms: 'Full access', status: 'Active' },
-    { name: 'Content Manager', users: 5, perms: 'Pages, News, Media', status: 'Active' },
-    { name: 'Support', users: 8, perms: 'Users, Trips', status: 'Limited' },
-    { name: 'Analyst', users: 4, perms: 'Read-only', status: 'Limited' },
-  ];
-  
-  const MEDIA = [
-    { name: 'logo.png', type: 'Image', size: '512 KB', status: 'Live', src: '/assets/logo.png' },
-    { name: 'everest.png', type: 'Image', size: '2.9 MB', status: 'Live', src: '/assets/everest.png' },
-    { name: 'pokhara.png', type: 'Image', size: '2.4 MB', status: 'Live', src: '/assets/pokhara.png' },
-  ];
 
+  // Build dynamic roles
+  const roleCounts = users.reduce((acc, u) => {
+    const role = u.role?.toUpperCase() || 'USER';
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const DYNAMIC_ROLES = [
+    { name: 'Admin', key: 'ADMIN', users: roleCounts['ADMIN'] || 0, perms: 'Full access', status: 'Active' },
+    { name: 'User', key: 'USER', users: roleCounts['USER'] || 0, perms: 'Standard access', status: 'Active' },
+    { name: 'Content Manager', key: 'CONTENT_MANAGER', users: roleCounts['CONTENT_MANAGER'] || 0, perms: 'Pages, News, Media', status: 'Active' },
+    { name: 'Support', key: 'SUPPORT', users: roleCounts['SUPPORT'] || 0, perms: 'Users, Trips', status: 'Limited' },
+  ];
+  
   const tabs = [
     { id: 'users', label: 'Users', icon: <Users size={16} /> },
     { id: 'roles', label: 'Roles', icon: <ShieldCheck size={16} /> },
@@ -252,6 +447,8 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
         
         {/* Content */}
         <div className="admin-panel bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          
+          {/* ─── USERS TAB ───────────────────────────────────────────── */}
           {activeTab === 'users' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -261,41 +458,62 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                     <input 
                       type="text" 
                       placeholder="Search users..." 
-                      className="pl-10 pr-4 py-2.5 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20"
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="pl-10 pr-4 py-2.5 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20 w-64"
                     />
                   </div>
-                  <AdvancedButton variant="secondary" size="sm" icon={<Filter size={16} />}>
-                    Filter
+                  <div className="relative">
+                    <AdvancedButton variant="secondary" size="sm" icon={<Filter size={16} />} onClick={() => setShowFilterMenu(!showFilterMenu)}>
+                      {userRoleFilter === 'all' ? 'Filter' : userRoleFilter}
+                    </AdvancedButton>
+                    {showFilterMenu && (
+                      <div className="absolute top-12 left-0 z-10 bg-white rounded-xl shadow-lg border border-slate-200 py-2 min-w-[140px]">
+                        {['all', 'USER', 'ADMIN'].map(role => (
+                          <button
+                            key={role}
+                            onClick={() => { setUserRoleFilter(role); setShowFilterMenu(false); }}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-sky-50 transition-colors ${userRoleFilter === role ? 'text-sky-600 font-bold' : 'text-slate-700'}`}
+                          >
+                            {role === 'all' ? 'All Roles' : role}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <AdvancedButton variant="ghost" size="sm" icon={<RefreshCw size={16} />} onClick={loadUsers}>
+                    Refresh
                   </AdvancedButton>
                 </div>
-                <AdvancedButton variant="primary" size="sm" icon={<UserPlus size={16} />}>
-                  Add User
-                </AdvancedButton>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400">{filteredUsers.length} of {users.length} users</span>
+                </div>
               </div>
               <div className="space-y-3">
                 {isLoadingUsers ? (
                   <div className="flex justify-center p-12"><LoadingSpinner size="lg" /></div>
-                ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500 text-sm">No users found in database.</div>
+                ) : filteredUsers.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 text-sm">
+                    {users.length === 0 ? 'No users found in database.' : 'No users match the current filter.'}
+                  </div>
                 ) : (
-                  users.map((user, i) => (
-                    <UserRow key={i} user={user} index={i} />
+                  filteredUsers.map((user, i) => (
+                    <UserRow key={user.id || i} user={user} index={i} onEdit={handleEditUser} onDelete={setDeletingUser} />
                   ))
                 )}
               </div>
             </div>
           )}
 
+          {/* ─── ROLES TAB ───────────────────────────────────────────── */}
           {activeTab === 'roles' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-900">Role Management</h2>
-                <AdvancedButton variant="primary" size="sm" icon={<ShieldCheck size={16} />}>
-                  Create Role
-                </AdvancedButton>
+                <span className="text-sm text-slate-400">{users.length} total users across all roles</span>
               </div>
               <div className="grid gap-4">
-                {ROLES.map((role, i) => (
+                {DYNAMIC_ROLES.map((role, i) => (
                     <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-sky-50 transition-colors animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -307,7 +525,7 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className="text-sm text-slate-500">{role.users} users</span>
+                        <span className="text-sm text-slate-500 font-semibold">{role.users} users</span>
                         <Badge variant={role.status === 'Active' ? 'success' : 'warning'}>
                           {role.status}
                         </Badge>
@@ -318,13 +536,19 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
             </div>
           )}
 
+          {/* ─── PAGES TAB (list) ────────────────────────────────────── */}
           {activeTab === 'pages' && !editingPage && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-900">Page Management</h2>
-                <AdvancedButton variant="primary" size="sm" icon={<Upload size={16} />} onClick={() => setEditingPage({ slug: 'new-page', title: 'New Page', status: 'Draft', contentBlocks: {}, updatedAt: '' })}>
-                  New Page
-                </AdvancedButton>
+                <div className="flex items-center gap-3">
+                  <AdvancedButton variant="ghost" size="sm" icon={<RefreshCw size={16} />} onClick={loadPages}>
+                    Refresh
+                  </AdvancedButton>
+                  <AdvancedButton variant="primary" size="sm" icon={<Upload size={16} />} onClick={() => setEditingPage({ slug: '', title: '', status: 'Draft', contentBlocks: {}, updatedAt: '' })}>
+                    New Page
+                  </AdvancedButton>
+                </div>
               </div>
               {isLoadingPages ? (
                 <div className="flex justify-center p-12"><LoadingSpinner size="lg" /></div>
@@ -353,11 +577,22 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                               {page.status}
                             </Badge>
                           </td>
-                          <td className="py-4 px-4 text-sm text-slate-500">{new Date(page.updatedAt).toLocaleDateString()}</td>
+                          <td className="py-4 px-4 text-sm text-slate-500">{page.updatedAt ? new Date(page.updatedAt).toLocaleDateString() : '—'}</td>
                           <td className="py-4 px-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => setEditingPage(page)} className="p-2 hover:bg-white rounded-lg transition-colors">
+                              <button onClick={() => setEditingPage(page)} className="p-2 hover:bg-white rounded-lg transition-colors" title="Edit page">
                                 <Edit size={16} className="text-slate-400 hover:text-sky-500" />
+                              </button>
+                              <button 
+                                onClick={() => handleDeletePage(page.slug)} 
+                                className="p-2 hover:bg-white rounded-lg transition-colors" 
+                                title="Delete page"
+                                disabled={isDeletingPage && deletingPageSlug === page.slug}
+                              >
+                                {isDeletingPage && deletingPageSlug === page.slug 
+                                  ? <LoadingSpinner size="sm" /> 
+                                  : <Trash2 size={16} className="text-red-400 hover:text-red-600" />
+                                }
                               </button>
                             </div>
                           </td>
@@ -370,6 +605,7 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
             </div>
           )}
 
+          {/* ─── PAGES TAB (editor) ──────────────────────────────────── */}
           {activeTab === 'pages' && editingPage && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-8">
@@ -377,11 +613,15 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                   <button onClick={() => setEditingPage(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
                   </button>
-                  <h2 className="text-lg font-bold text-slate-900">Edit Page: {editingPage.title}</h2>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    {editingPage.updatedAt === '' ? 'Create New Page' : `Edit Page: ${editingPage.title}`}
+                  </h2>
                 </div>
                 <div className="flex gap-3">
                   <AdvancedButton variant="ghost" size="sm" onClick={() => setEditingPage(null)}>Cancel</AdvancedButton>
-                  <AdvancedButton variant="primary" size="sm" icon={<CheckCircle size={16}/>} onClick={handleSavePage}>Save Changes</AdvancedButton>
+                  <AdvancedButton variant="primary" size="sm" icon={<CheckCircle size={16}/>} onClick={handleSavePage}>
+                    {editingPage.updatedAt === '' ? 'Create Page' : 'Save Changes'}
+                  </AdvancedButton>
                 </div>
               </div>
 
@@ -389,11 +629,11 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Internal Title</label>
-                    <input type="text" value={editingPage.title} onChange={(e) => setEditingPage({...editingPage, title: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20" />
+                    <input type="text" value={editingPage.title} onChange={(e) => setEditingPage({...editingPage, title: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20" placeholder="Page Title" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">URL Slug</label>
-                    <input type="text" value={editingPage.slug} onChange={(e) => setEditingPage({...editingPage, slug: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20 font-mono" />
+                    <input type="text" value={editingPage.slug} onChange={(e) => setEditingPage({...editingPage, slug: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20 font-mono" placeholder="page-slug" />
                   </div>
                 </div>
 
@@ -453,42 +693,58 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
             </div>
           )}
 
+          {/* ─── MEDIA TAB ───────────────────────────────────────────── */}
           {activeTab === 'media' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-900">Media Library</h2>
-                <AdvancedButton variant="primary" size="sm" icon={<Upload size={16} />}>
+                <AdvancedButton 
+                  variant="primary" 
+                  size="sm" 
+                  icon={<Upload size={16} />}
+                  onClick={() => setEditingMedia({ name: '', url: '', type: 'Image', sizeLabel: '0 KB', status: 'Live' })}
+                >
                   Upload
                 </AdvancedButton>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {MEDIA.map((item, i) => (
-                    <div key={i} className="group bg-slate-50 rounded-xl overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                      <div className="aspect-video bg-slate-200 relative overflow-hidden">
-                        <img src={item.src} alt={item.name} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <button className="p-2 bg-white rounded-lg">
-                            <Edit size={16} className="text-slate-600" />
-                          </button>
-                          <button className="p-2 bg-white rounded-lg">
-                            <Trash2 size={16} className="text-red-500" />
-                          </button>
+              
+              {isLoadingMedia ? (
+                <div className="flex justify-center p-12"><LoadingSpinner size="lg" /></div>
+              ) : mediaItems.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-sm border-2 border-dashed border-slate-200 rounded-xl">
+                    No media items found. Upload one to get started.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mediaItems.map((item, i) => (
+                      <div key={item.id || i} className="group bg-slate-50 rounded-xl overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
+                        <div className="aspect-video bg-slate-200 relative overflow-hidden">
+                          <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button onClick={() => setEditingMedia(item)} className="p-2 bg-white hover:bg-sky-50 rounded-lg transition-colors">
+                              <Edit size={16} className="text-slate-600 hover:text-sky-600" />
+                            </button>
+                            <button onClick={() => setDeletingMedia(item)} className="p-2 bg-white hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 size={16} className="text-red-500 hover:text-red-700" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="font-medium text-slate-900 truncate" title={item.name}>{item.name}</div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs text-slate-500">{item.type}</span>
+                            <span className="text-xs text-slate-500">{item.sizeLabel}</span>
+                            <Badge variant={item.status === 'Archived' ? 'warning' : 'success'} size="sm">{item.status}</Badge>
+                          </div>
                         </div>
                       </div>
-                      <div className="p-4">
-                        <div className="font-medium text-slate-900 truncate">{item.name}</div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs text-slate-500">{item.type}</span>
-                          <span className="text-xs text-slate-500">{item.size}</span>
-                          <Badge variant="success" size="sm">{item.status}</Badge>
-                        </div>
-                      </div>
-                    </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
+          {/* ─── SETTINGS TAB ────────────────────────────────────────── */}
           {activeTab === 'settings' && (
             <div className="p-6">
               <h2 className="text-lg font-bold text-slate-900 mb-6">System Settings</h2>
@@ -545,6 +801,154 @@ const AdminPage = ({ onBack }: { onBack: () => void }) => {
           )}
         </div>
       </div>
+
+      {/* ─── Edit User Modal ─────────────────────────────────────────────── */}
+      <Modal isOpen={!!editingUser} onClose={() => setEditingUser(null)} title="Edit User">
+        {editingUser && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
+              <Avatar alt={editingUser.name} size="lg" />
+              <div>
+                <div className="font-bold text-slate-900 text-lg">{editingUser.name}</div>
+                <div className="text-sm text-slate-500">{editingUser.email}</div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Role</label>
+              <select 
+                value={editRole} 
+                onChange={(e) => setEditRole(e.target.value)}
+                className="w-full p-4 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20"
+              >
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
+                <option value="CONTENT_MANAGER">Content Manager</option>
+                <option value="SUPPORT">Support</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <AdvancedButton variant="ghost" size="sm" onClick={() => setEditingUser(null)}>Cancel</AdvancedButton>
+              <AdvancedButton variant="primary" size="sm" icon={<CheckCircle size={16} />} onClick={handleSaveUserEdit} disabled={isSavingUser}>
+                {isSavingUser ? 'Saving...' : 'Save Changes'}
+              </AdvancedButton>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ─── Delete User Confirmation Modal ──────────────────────────────── */}
+      <Modal isOpen={!!deletingUser} onClose={() => setDeletingUser(null)} title="Delete User">
+        {deletingUser && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-red-50 rounded-xl">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="font-bold text-red-900">Are you sure?</p>
+                <p className="text-sm text-red-700">
+                  You are about to permanently delete <strong>{deletingUser.name}</strong> ({deletingUser.email}). This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <AdvancedButton variant="ghost" size="sm" onClick={() => setDeletingUser(null)}>Cancel</AdvancedButton>
+              <AdvancedButton 
+                variant="primary" 
+                size="sm" 
+                icon={<Trash2 size={16} />} 
+                onClick={handleConfirmDeleteUser} 
+                disabled={isDeletingUser}
+                className="!bg-red-600 hover:!bg-red-700"
+              >
+                {isDeletingUser ? 'Deleting...' : 'Delete User'}
+              </AdvancedButton>
+            </div>
+          </div>
+        )}
+      </Modal>
+      {/* ─── Delete Media Confirmation Modal ──────────────────────────────── */}
+      <Modal isOpen={!!deletingMedia} onClose={() => setDeletingMedia(null)} title="Delete Media">
+        {deletingMedia && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-red-50 rounded-xl">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="font-bold text-red-900">Are you sure?</p>
+                <p className="text-sm text-red-700">
+                  You are about to permanently delete <strong>{deletingMedia.name}</strong>. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <AdvancedButton variant="ghost" size="sm" onClick={() => setDeletingMedia(null)}>Cancel</AdvancedButton>
+              <AdvancedButton 
+                variant="primary" 
+                size="sm" 
+                icon={<Trash2 size={16} />} 
+                onClick={handleConfirmDeleteMedia} 
+                disabled={isDeletingMedia}
+                className="!bg-red-600 hover:!bg-red-700"
+              >
+                {isDeletingMedia ? 'Deleting...' : 'Delete Media'}
+              </AdvancedButton>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ─── Add/Edit Media Modal ─────────────────────────────────────────── */}
+      <Modal isOpen={!!editingMedia} onClose={() => setEditingMedia(null)} title={editingMedia?.id ? "Edit Media" : "Upload Media"}>
+        {editingMedia && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Internal Name</label>
+              <input type="text" value={editingMedia.name} onChange={(e) => setEditingMedia({...editingMedia, name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20" placeholder="e.g. Hero Image" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Image URL</label>
+              <input type="text" value={editingMedia.url} onChange={(e) => setEditingMedia({...editingMedia, url: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20" placeholder="https://..." />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Type</label>
+                  <select value={editingMedia.type} onChange={(e) => setEditingMedia({...editingMedia, type: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20">
+                    <option value="Image">Image</option>
+                    <option value="Video">Video</option>
+                    <option value="Document">Document</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Status</label>
+                  <select value={editingMedia.status} onChange={(e) => setEditingMedia({...editingMedia, status: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20">
+                    <option value="Live">Live</option>
+                    <option value="Archived">Archived</option>
+                  </select>
+                </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Size Label</label>
+              <input type="text" value={editingMedia.sizeLabel} onChange={(e) => setEditingMedia({...editingMedia, sizeLabel: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-sky-500/20" placeholder="e.g. 512 KB" />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <AdvancedButton variant="ghost" size="sm" onClick={() => setEditingMedia(null)}>Cancel</AdvancedButton>
+              <AdvancedButton variant="primary" size="sm" icon={<CheckCircle size={16} />} onClick={handleSaveMedia} disabled={isSavingMedia}>
+                {isSavingMedia ? 'Saving...' : 'Save Media'}
+              </AdvancedButton>
+            </div>
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 };
