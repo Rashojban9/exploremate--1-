@@ -1,0 +1,344 @@
+================================================================================
+                    EXPLOREMATE - FUNCTIONAL REQUIREMENTS DOCUMENT
+                       AI-Powered Travel Companion for Nepal
+================================================================================
+
+Project Name    : ExploreMate - AI-Powered Travel Companion for Nepal
+Document Type   : Functional Requirements Specification
+Section         : 7.8.2.7. Functional Requirements
+Total FRs       : 15
+Prepared By     : [Student Name]
+Date            : [Date]
+
+================================================================================
+7.8.2.7.1.  Register User
+================================================================================
+
+Req.ID       : FR-01
+Description  : User can create a new account in the system.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User requests the registration form.
+  SR-02        | User fills in and submits the registration form with
+               | Full Name, Email, Password, and Confirm Password.
+  SR-03        | The system verifies all the fields and throws error if
+               | data cannot be validated.
+  SR-04        | The system checks whether the email is unique or not.
+  SR-05        | The system shows the message of whether user registration
+               | was successful or not.
+
+
+================================================================================
+7.8.2.7.2.  Login User
+================================================================================
+
+Req.ID       : FR-02
+Description  : Registered user can log into the system with valid credentials.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User requests the login form.
+  SR-02        | User enters email and password and submits the form.
+  SR-03        | The system validates the input fields and throws error
+               | if fields are empty or invalid.
+  SR-04        | The system authenticates the credentials against the
+               | database.
+  SR-05        | The system generates a JWT token and redirects the user
+               | to the dashboard upon successful login.
+  SR-06        | The system displays an error message if credentials
+               | are invalid.
+
+
+================================================================================
+7.8.2.7.3.  Reset Password
+================================================================================
+
+Req.ID       : FR-03
+Description  : User can reset their forgotten password via email verification.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User clicks the "Forgot Password" link on the login page.
+  SR-02        | User enters their registered email address.
+  SR-03        | The system verifies whether the email exists in the
+               | database.
+  SR-04        | The system sends a password reset link to the registered
+               | email address.
+  SR-05        | User clicks the reset link and enters a new password.
+  SR-06        | The system validates the new password and updates it
+               | in the database.
+  SR-07        | The system shows a success message and redirects the
+               | user to the login page.
+
+
+================================================================================
+7.8.2.7.4.  Manage User Profile
+================================================================================
+
+Req.ID       : FR-04
+Description  : User can view and update their personal profile information.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User navigates to the Profile page from the navigation
+               | menu.
+  SR-02        | The system displays the current profile information
+               | including name, email, bio, phone, and profile picture.
+  SR-03        | User clicks Edit Profile and modifies their details.
+  SR-04        | The system validates the updated fields before saving.
+  SR-05        | The system updates the profile information in the
+               | database and displays a success message.
+  SR-06        | User can upload a new profile picture which is persisted
+               | across all pages.
+  SR-07        | User can cancel editing to discard unsaved changes.
+
+
+================================================================================
+7.8.2.7.5.  Delete User Account
+================================================================================
+
+Req.ID       : FR-05
+Description  : User can permanently delete their own account from the system.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User navigates to the Profile Settings section.
+  SR-02        | User clicks the "Delete Account" button.
+  SR-03        | The system displays a confirmation dialog warning the
+               | user of permanent data loss.
+  SR-04        | User confirms the deletion.
+  SR-05        | The system permanently removes the user account and all
+               | associated data from the database.
+  SR-06        | The system clears the session and redirects the user to
+               | the landing page.
+
+
+================================================================================
+7.8.2.7.6.  Create and Manage Trips
+================================================================================
+
+Req.ID       : FR-06
+Description  : User can create, view, edit, and delete personal trips.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User clicks "Create Trip" and fills in trip name,
+               | destination, start date, end date, and description.
+  SR-02        | The system validates all trip fields including date
+               | constraints (start date cannot be in the past).
+  SR-03        | The system saves the trip to the database and adds it
+               | to the user's trips list.
+  SR-04        | User can view full trip details by clicking on a trip
+               | from the list.
+  SR-05        | User can edit existing trip details and save updates.
+  SR-06        | User can delete a trip after confirming deletion in the
+               | confirmation dialog.
+  SR-07        | The system shows a success or error message for each
+               | operation performed.
+
+
+================================================================================
+7.8.2.7.7.  Search and Optimize Routes
+================================================================================
+
+Req.ID       : FR-07
+Description  : User can search for optimized routes between two locations
+               on an interactive map.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User enters a start location and destination in the
+               | Route Optimizer page.
+  SR-02        | The system geocodes the locations using the Mapbox API.
+  SR-03        | The system calculates and displays the optimized route
+               | on the map with distance and estimated duration.
+  SR-04        | The system provides turn-by-turn navigation directions.
+  SR-05        | The system displays an error message if the location
+               | cannot be found.
+  SR-06        | User can toggle the real-time traffic layer on the map.
+
+
+================================================================================
+7.8.2.7.8.  View Points of Interest (POIs) Along Route
+================================================================================
+
+Req.ID       : FR-08
+Description  : User can view and filter Points of Interest such as hotels,
+               restaurants, and fuel stations along a searched route.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | The system fetches POIs along the route corridor after
+               | a route is calculated.
+  SR-02        | POIs are displayed as markers on the map categorized by
+               | type (Hotels, Restaurants, Fuel Stations, EV Charging).
+  SR-03        | User can enable or disable individual POI category
+               | filters.
+  SR-04        | The map dynamically updates to show or hide markers
+               | based on the selected filters.
+  SR-05        | User can click on a POI marker to view additional
+               | details such as name and category.
+
+
+================================================================================
+7.8.2.7.9.  Get AI Travel Suggestions
+================================================================================
+
+Req.ID       : FR-09
+Description  : User can receive AI-powered travel suggestions and
+               recommendations for destinations in Nepal.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User navigates to the AI Suggestions page.
+  SR-02        | User enters a travel query or preference in the
+               | input field.
+  SR-03        | The system validates the input and shows an error if
+               | the query is empty.
+  SR-04        | The system sends the query to the AI service and
+               | displays a loading animation during processing.
+  SR-05        | The AI service returns personalized travel suggestions
+               | with descriptions, ratings, and tips.
+  SR-06        | The system displays the AI response in a well-formatted
+               | and readable layout.
+
+
+================================================================================
+7.8.2.7.10.  Translate Text Between Languages
+================================================================================
+
+Req.ID       : FR-10
+Description  : User can translate text between English and Nepali using
+               AI-powered translation.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User navigates to the Translator page.
+  SR-02        | User selects source and target languages (English /
+               | Nepali).
+  SR-03        | User enters text and clicks the Translate button.
+  SR-04        | The system validates the input and shows error if text
+               | is empty.
+  SR-05        | The system sends the text to the AI translation service
+               | and returns the translated output with pronunciation
+               | guide.
+  SR-06        | User can use the Swap button to interchange the source
+               | and target languages.
+
+
+================================================================================
+7.8.2.7.11.  Create and Manage Group Trips
+================================================================================
+
+Req.ID       : FR-11
+Description  : User can create group trips, invite members, and collaborate
+               with other travelers.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User navigates to the Group Plan page and creates a new
+               | group trip with name, destination, and max members.
+  SR-02        | The system generates a shareable invite link for the
+               | group trip.
+  SR-03        | Other users can join the group trip using the invite
+               | link.
+  SR-04        | The system validates the member limit and prevents
+               | new joins when the group is full.
+  SR-05        | Group members can communicate via real-time group chat.
+  SR-06        | A member can leave the group trip at any time.
+  SR-07        | The system updates the member list in real-time when
+               | members join or leave.
+
+
+================================================================================
+7.8.2.7.12.  Save and Manage Favorite Places
+================================================================================
+
+Req.ID       : FR-12
+Description  : User can save places to their favorites list and manage
+               saved items.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User clicks the bookmark icon on a place card to save
+               | it to favorites.
+  SR-02        | The system adds the place to the user's Saved Items
+               | list and shows a confirmation notification.
+  SR-03        | User can unsave a place by clicking the filled bookmark
+               | icon.
+  SR-04        | User can view all saved items on the Saved Items page.
+  SR-05        | User can search within saved items using a search bar.
+  SR-06        | User can filter saved items by category (Heritage,
+               | Nature, Adventure, etc.).
+
+
+================================================================================
+7.8.2.7.13.  Scan QR Code for Location Guide
+================================================================================
+
+Req.ID       : FR-13
+Description  : User can scan QR codes placed at tourist locations to get
+               detailed AI-generated guides and historical information.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | User navigates to the QR Guide page and activates the
+               | QR scanner.
+  SR-02        | User scans a QR code placed at a tourist location.
+  SR-03        | The system decodes the QR code and fetches the location
+               | data from the backend.
+  SR-04        | The system displays detailed location information
+               | including history, significance, and visitor tips.
+  SR-05        | The system shows an error message if the QR code is
+               | invalid or unrecognized.
+
+
+================================================================================
+7.8.2.7.14.  Admin - Manage Users
+================================================================================
+
+Req.ID       : FR-14
+Description  : Admin can view, lock/unlock, and delete user accounts from
+               the admin panel.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | Admin logs in with admin credentials and is redirected
+               | to the Admin Dashboard.
+  SR-02        | Admin navigates to the User Management section.
+  SR-03        | The system displays a paginated table of all registered
+               | users with name, email, role, and status.
+  SR-04        | Admin can lock a user account to prevent the user from
+               | logging in.
+  SR-05        | Admin can unlock a previously locked user account.
+  SR-06        | Admin can permanently delete a user account after
+               | confirmation.
+  SR-07        | The system updates the user table in real-time after
+               | each operation.
+
+
+================================================================================
+7.8.2.7.15.  Admin - View System Statistics
+================================================================================
+
+Req.ID       : FR-15
+Description  : Admin can view real-time system statistics and analytics
+               on the admin dashboard.
+
+  Sys.Req.ID   | System Requirement
+  -------------|------------------------------------------------------------
+  SR-01        | Admin navigates to the Admin Dashboard.
+  SR-02        | The system fetches real-time statistics from the
+               | backend services.
+  SR-03        | The dashboard displays total registered users count.
+  SR-04        | The dashboard displays total trips created count.
+  SR-05        | The dashboard displays total content pages count.
+  SR-06        | The dashboard displays active sessions count.
+  SR-07        | The statistics are updated dynamically when the admin
+               | refreshes or revisits the dashboard.
+
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================

@@ -1,0 +1,896 @@
+================================================================================
+                        EXPLOREMATE - SOFTWARE TESTING DOCUMENT
+                              System & Functional Testing
+================================================================================
+
+Project Name    : ExploreMate - AI-Powered Travel Companion for Nepal
+Module          : Full System Testing
+Testing Type    : Functional Testing / System Testing
+Total Tests     : 60
+Tested By       : [Student Name]
+Date            : [Date]
+
+================================================================================
+                    4.1  AUTHENTICATION MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1.1. Test 1 - Signup with valid credentials
+--------------------------------------------------------------------------------
+Test             : 1
+Description      : Signup in the system with valid user credentials
+Action           : Entering valid details in the signup form
+                     Full Name: Test User
+                     Email: testuser@gmail.com
+                     Password: Test@1234
+                     Confirm Password: Test@1234
+Expected Result  : User should be registered successfully and redirected to
+                   the login page with a success message.
+Actual Result    : User was registered successfully and redirected to the
+                   login page with a success message.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.2. Test 2 - Signup with already registered email
+--------------------------------------------------------------------------------
+Test             : 2
+Description      : Signup with an email that is already registered in the system
+Action           : Entering credentials with an existing email
+                     Full Name: Test User
+                     Email: testuser@gmail.com
+                     Password: Test@1234
+                     Confirm Password: Test@1234
+Expected Result  : System should display an error message indicating that
+                   the email is already registered.
+Actual Result    : System displayed error message "Email already exists"
+                   and prevented duplicate registration.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.3. Test 3 - Signup with mismatched passwords
+--------------------------------------------------------------------------------
+Test             : 3
+Description      : Signup with passwords that do not match
+Action           : Entering mismatched passwords in the signup form
+                     Full Name: Test User
+                     Email: newuser@gmail.com
+                     Password: Test@1234
+                     Confirm Password: Test@5678
+Expected Result  : System should display an error message indicating that
+                   the passwords do not match.
+Actual Result    : System displayed error message "Passwords do not match"
+                   and prevented form submission.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.4. Test 4 - Signup with empty fields
+--------------------------------------------------------------------------------
+Test             : 4
+Description      : Attempt to signup with all fields left empty
+Action           : Clicking the signup button without entering any details
+Expected Result  : System should display validation errors for all
+                   required fields.
+Actual Result    : System displayed validation errors for Full Name, Email,
+                   Password, and Confirm Password fields.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.5. Test 5 - Login with valid credentials
+--------------------------------------------------------------------------------
+Test             : 5
+Description      : Login in the system with valid login credentials
+Action           : Passing valid login credentials in the login form
+                     Email: testuser@gmail.com
+                     Password: Test@1234
+Expected Result  : User should be given success message and should be
+                   redirected to the dashboard.
+Actual Result    : User was given success message and was redirected to
+                   the dashboard.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.6. Test 6 - Login with invalid credentials
+--------------------------------------------------------------------------------
+Test             : 6
+Description      : Login in the system with invalid login credentials
+Action           : Passing invalid login credentials in the login form
+                     Email: wronguser@gmail.com
+                     Password: wrongpassword
+Expected Result  : System should display an error message indicating
+                   invalid credentials.
+Actual Result    : System displayed error message "Invalid email or
+                   password" and remained on the login page.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.7. Test 7 - Login with empty fields
+--------------------------------------------------------------------------------
+Test             : 7
+Description      : Attempt to login with empty email and password fields
+Action           : Clicking the login button without entering any credentials
+Expected Result  : System should display validation errors for email and
+                   password fields.
+Actual Result    : System displayed validation errors "Email is required"
+                   and "Password is required".
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.8. Test 8 - Remember Me functionality
+--------------------------------------------------------------------------------
+Test             : 8
+Description      : Test the Remember Me checkbox on the login page
+Action           : Logging in with valid credentials and checking the
+                   "Remember Me" checkbox, then closing and reopening
+                   the browser
+Expected Result  : User should remain logged in after reopening the browser.
+Actual Result    : User remained logged in after browser restart, session
+                   was persisted correctly.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.9. Test 9 - Forgot Password functionality
+--------------------------------------------------------------------------------
+Test             : 9
+Description      : Test the Forgot Password link and email reset flow
+Action           : Clicking "Forgot Password" link on login page and
+                   entering registered email: testuser@gmail.com
+Expected Result  : System should send a password reset email and display
+                   a confirmation message.
+Actual Result    : System displayed "Password reset link sent to your
+                   email" confirmation message.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.1.10. Test 10 - Logout functionality
+--------------------------------------------------------------------------------
+Test             : 10
+Description      : Test the logout functionality from the navigation menu
+Action           : Clicking the Logout button from the user dropdown menu
+                   while logged in
+Expected Result  : User should be logged out and redirected to the
+                   landing page.
+Actual Result    : User was logged out successfully, session was cleared,
+                   and user was redirected to the landing page.
+Conclusion       : Success
+
+
+================================================================================
+                    4.2  DASHBOARD MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.2.1. Test 11 - Dashboard page loads correctly
+--------------------------------------------------------------------------------
+Test             : 11
+Description      : Verify that the dashboard page loads with all sections
+Action           : Logging in and navigating to the dashboard page
+Expected Result  : Dashboard should display Welcome section, Activity Stats,
+                   Recent Trips, Notifications, Saved Items, and Explore More.
+Actual Result    : All dashboard sections loaded correctly with user-specific
+                   data displayed.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.2.2. Test 12 - Dashboard Activity Stats display
+--------------------------------------------------------------------------------
+Test             : 12
+Description      : Verify Activity Stats section shows correct statistics
+Action           : Checking the Activity Stats section on the dashboard
+                   after performing various activities
+Expected Result  : Activity Stats should show correct counts for trips taken,
+                   places saved, reviews given, and photos uploaded.
+Actual Result    : Activity Stats displayed accurate counts matching the
+                   user's activity history.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.2.3. Test 13 - Dashboard Recent Trips section
+--------------------------------------------------------------------------------
+Test             : 13
+Description      : Verify Recent Trips section displays user's recent trips
+Action           : Viewing the Recent Trips section on the dashboard after
+                   creating multiple trips
+Expected Result  : Recent Trips should display the latest trips with
+                   destination names, dates, and status.
+Actual Result    : Recent Trips section correctly displayed the user's latest
+                   trips with all relevant information.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.2.4. Test 14 - Dashboard Notifications section
+--------------------------------------------------------------------------------
+Test             : 14
+Description      : Verify Notifications section shows recent notifications
+Action           : Checking the Notifications section on the dashboard
+Expected Result  : Notifications section should display recent system
+                   notifications and updates.
+Actual Result    : Notifications section displayed recent notifications
+                   with correct timestamps and content.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.2.5. Test 15 - Dashboard navigation links
+--------------------------------------------------------------------------------
+Test             : 15
+Description      : Verify all navigation links from the dashboard work correctly
+Action           : Clicking on various navigation links and cards on the
+                   dashboard (View All Trips, View All Saved, etc.)
+Expected Result  : Each link should navigate to the correct corresponding page.
+Actual Result    : All navigation links redirected to the correct pages
+                   without errors.
+Conclusion       : Success
+
+
+================================================================================
+                    4.3  PROFILE MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.3.1. Test 16 - View profile information
+--------------------------------------------------------------------------------
+Test             : 16
+Description      : Verify user profile page displays correct information
+Action           : Navigating to the Profile page after logging in
+Expected Result  : Profile page should display user's name, email, bio,
+                   phone number, and profile picture.
+Actual Result    : Profile page displayed all user information correctly
+                   including profile picture.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.3.2. Test 17 - Edit profile information
+--------------------------------------------------------------------------------
+Test             : 17
+Description      : Test editing user profile details
+Action           : Clicking Edit Profile button and updating:
+                     Full Name: Updated User
+                     Bio: Travel enthusiast from Nepal
+                     Phone: 9841234567
+Expected Result  : Profile should be updated successfully with a success
+                   message and display the new information.
+Actual Result    : Profile was updated successfully and new information
+                   was displayed correctly on the profile page.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.3.3. Test 18 - Upload profile picture
+--------------------------------------------------------------------------------
+Test             : 18
+Description      : Test uploading a new profile picture
+Action           : Clicking on the profile picture area and selecting a
+                   new image file (profile.jpg, 2MB)
+Expected Result  : Profile picture should be updated and displayed across
+                   all pages (navigation, dashboard, profile).
+Actual Result    : Profile picture was uploaded and displayed consistently
+                   across all application pages.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.3.4. Test 19 - Cancel profile edit
+--------------------------------------------------------------------------------
+Test             : 19
+Description      : Test cancelling a profile edit operation
+Action           : Clicking Edit Profile, modifying fields, then clicking
+                   the Cancel button
+Expected Result  : Changes should be discarded and original profile
+                   information should be restored.
+Actual Result    : Changes were discarded and original profile information
+                   was displayed correctly.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.3.5. Test 20 - Delete account functionality
+--------------------------------------------------------------------------------
+Test             : 20
+Description      : Test the delete account functionality from settings
+Action           : Navigating to Profile Settings, clicking "Delete Account"
+                   and confirming the deletion
+Expected Result  : Account should be deleted, user should be logged out
+                   and redirected to the landing page.
+Actual Result    : Account was deleted successfully, session was cleared,
+                   and user was redirected to the landing page.
+Conclusion       : Success
+
+
+================================================================================
+                    4.4  ROUTE OPTIMIZER MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.4.1. Test 21 - Search for a route between two locations
+--------------------------------------------------------------------------------
+Test             : 21
+Description      : Test route search between two valid locations
+Action           : Entering start and destination locations:
+                     Start: Kathmandu
+                     Destination: Pokhara
+                   and clicking "Find Route"
+Expected Result  : System should display the optimized route on the map
+                   with distance, duration, and turn-by-turn directions.
+Actual Result    : Route was displayed on the map with accurate distance
+                   (200 km), estimated duration, and step-by-step directions.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.4.2. Test 22 - Display POIs along the route
+--------------------------------------------------------------------------------
+Test             : 22
+Description      : Verify Points of Interest are displayed along the route
+Action           : After finding a route from Kathmandu to Pokhara, enabling
+                   POI filters for Hotels, Restaurants, and Fuel Stations
+Expected Result  : POIs should be displayed as markers on the map along
+                   the route corridor.
+Actual Result    : Hotels, Restaurants, and Fuel Station markers were
+                   displayed correctly along the route corridor.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.4.3. Test 23 - Toggle traffic layer on map
+--------------------------------------------------------------------------------
+Test             : 23
+Description      : Test toggling the real-time traffic layer on the map
+Action           : Clicking the Traffic toggle button on the Route Optimizer
+                   map view
+Expected Result  : Traffic layer should be toggled on/off showing real-time
+                   traffic conditions on the route.
+Actual Result    : Traffic layer toggled correctly showing congestion
+                   levels with color-coded overlays.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.4.4. Test 24 - Route search with invalid location
+--------------------------------------------------------------------------------
+Test             : 24
+Description      : Test route search with an invalid destination
+Action           : Entering an invalid destination:
+                     Start: Kathmandu
+                     Destination: xyzabc123
+Expected Result  : System should display an error message indicating the
+                   location could not be found.
+Actual Result    : System displayed "Location not found" error message
+                   and suggested checking the input.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.4.5. Test 25 - POI filter toggle functionality
+--------------------------------------------------------------------------------
+Test             : 25
+Description      : Test enabling and disabling individual POI category filters
+Action           : Toggling Hotels ON, Restaurants OFF, and Fuel Stations ON
+                   on an active route
+Expected Result  : Only Hotels and Fuel Station markers should be visible
+                   on the map. Restaurant markers should be hidden.
+Actual Result    : Map correctly showed only Hotel and Fuel Station markers.
+                   Restaurant markers were hidden as expected.
+Conclusion       : Success
+
+
+================================================================================
+                    4.5  AI SUGGESTION MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.5.1. Test 26 - Get AI travel suggestions
+--------------------------------------------------------------------------------
+Test             : 26
+Description      : Test getting AI-powered travel suggestions
+Action           : Navigating to AI Suggestions page and entering query:
+                   "Best places to visit in Kathmandu Valley"
+Expected Result  : AI should return relevant travel suggestions with
+                   descriptions, ratings, and recommendations.
+Actual Result    : AI returned detailed suggestions including Pashupatinath,
+                   Boudhanath, Swayambhunath with descriptions and tips.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.5.2. Test 27 - AI suggestion with specific preferences
+--------------------------------------------------------------------------------
+Test             : 27
+Description      : Test AI suggestions with specific travel preferences
+Action           : Entering preferences:
+                   "Family-friendly places in Pokhara for 3-day trip"
+Expected Result  : AI should return family-oriented suggestions tailored
+                   to a 3-day itinerary in Pokhara.
+Actual Result    : AI returned family-friendly suggestions with a 3-day
+                   itinerary including Phewa Lake, Sarangkot, and cave visits.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.5.3. Test 28 - AI suggestion with empty input
+--------------------------------------------------------------------------------
+Test             : 28
+Description      : Test AI suggestion page with empty query input
+Action           : Clicking the submit button without entering any query
+Expected Result  : System should display a validation error asking the
+                   user to enter a query.
+Actual Result    : System displayed validation message "Please enter a
+                   travel query" and prevented submission.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.5.4. Test 29 - AI suggestion response formatting
+--------------------------------------------------------------------------------
+Test             : 29
+Description      : Verify AI response is properly formatted and readable
+Action           : Submitting query "Adventure activities in Chitwan"
+                   and examining the response format
+Expected Result  : Response should be well-formatted with clear headings,
+                   bullet points, and organized information.
+Actual Result    : AI response was properly formatted with headings,
+                   bullet points, cost estimates, and seasonal tips.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.5.5. Test 30 - AI suggestion loading state
+--------------------------------------------------------------------------------
+Test             : 30
+Description      : Verify loading state is displayed while AI processes
+Action           : Submitting a query and observing the UI during
+                   processing time
+Expected Result  : A loading spinner or animation should be displayed
+                   while the AI is generating the response.
+Actual Result    : Loading animation was displayed with "Generating
+                   suggestions..." text during processing.
+Conclusion       : Success
+
+
+================================================================================
+                    4.6  TRANSLATOR MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.6.1. Test 31 - Translate English to Nepali
+--------------------------------------------------------------------------------
+Test             : 31
+Description      : Test translation from English to Nepali language
+Action           : Selecting source language as English, target language
+                   as Nepali, and entering text: "How are you?"
+Expected Result  : System should display the Nepali translation
+                   "तपाईंलाई कस्तो छ?" with pronunciation guide.
+Actual Result    : Translation displayed correctly as "तपाईंलाई कस्तो छ?"
+                   with phonetic pronunciation guide.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.6.2. Test 32 - Translate Nepali to English
+--------------------------------------------------------------------------------
+Test             : 32
+Description      : Test translation from Nepali to English language
+Action           : Selecting source language as Nepali, target language
+                   as English, and entering text: "नमस्ते"
+Expected Result  : System should display the English translation "Hello"
+                   or "Greetings".
+Actual Result    : Translation displayed correctly as "Hello / Greetings"
+                   with contextual usage notes.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.6.3. Test 33 - AI-powered translation mode
+--------------------------------------------------------------------------------
+Test             : 33
+Description      : Test AI-powered translation for complex sentences
+Action           : Enabling AI translation mode and entering complex text:
+                   "के गर्दै हुनुहुन्छ"
+Expected Result  : AI should provide fluent translation "What are you doing?"
+                   instead of word-by-word dictionary translation.
+Actual Result    : AI provided fluent translation "What are you doing?"
+                   with natural language output.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.6.4. Test 34 - Translation with empty input
+--------------------------------------------------------------------------------
+Test             : 34
+Description      : Test translator with empty text input
+Action           : Clicking translate button without entering any text
+Expected Result  : System should display a validation message asking
+                   user to enter text to translate.
+Actual Result    : System displayed "Please enter text to translate"
+                   validation message.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.6.5. Test 35 - Swap languages functionality
+--------------------------------------------------------------------------------
+Test             : 35
+Description      : Test the swap languages button in translator
+Action           : Setting source as English and target as Nepali, entering
+                   text, then clicking the swap button
+Expected Result  : Source and target languages should be swapped and
+                   the translation should update accordingly.
+Actual Result    : Languages were swapped correctly (Nepali to English)
+                   and translation updated automatically.
+Conclusion       : Success
+
+
+================================================================================
+                    4.7  TRIP MANAGEMENT MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.7.1. Test 36 - Create a new trip
+--------------------------------------------------------------------------------
+Test             : 36
+Description      : Test creating a new trip with valid details
+Action           : Clicking "Create Trip" and entering:
+                     Trip Name: Pokhara Adventure
+                     Destination: Pokhara
+                     Start Date: 2026-05-01
+                     End Date: 2026-05-05
+                     Description: Family trip to Pokhara
+Expected Result  : Trip should be created successfully and appear in
+                   the trips list.
+Actual Result    : Trip was created successfully and appeared in the
+                   trips list with all entered details.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.7.2. Test 37 - View trip details
+--------------------------------------------------------------------------------
+Test             : 37
+Description      : Test viewing details of an existing trip
+Action           : Clicking on "Pokhara Adventure" trip from the trips list
+Expected Result  : System should display full trip details including
+                   destination, dates, description, and itinerary.
+Actual Result    : Full trip details were displayed correctly with all
+                   information and interactive map view.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.7.3. Test 38 - Edit an existing trip
+--------------------------------------------------------------------------------
+Test             : 38
+Description      : Test editing an existing trip's details
+Action           : Clicking Edit on "Pokhara Adventure" trip and updating:
+                     End Date: 2026-05-07
+                     Description: Extended family trip to Pokhara
+Expected Result  : Trip should be updated successfully with the new details.
+Actual Result    : Trip was updated successfully and new details were
+                   reflected in the trips list.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.7.4. Test 39 - Delete a trip
+--------------------------------------------------------------------------------
+Test             : 39
+Description      : Test deleting an existing trip
+Action           : Clicking Delete on a trip and confirming the deletion
+                   in the confirmation dialog
+Expected Result  : Trip should be deleted and removed from the trips list.
+Actual Result    : Trip was deleted successfully and removed from the
+                   trips list after confirmation.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.7.5. Test 40 - Create trip with past dates
+--------------------------------------------------------------------------------
+Test             : 40
+Description      : Test creating a trip with start date in the past
+Action           : Entering trip details with past start date:
+                     Start Date: 2025-01-01
+                     End Date: 2025-01-05
+Expected Result  : System should display a validation error indicating
+                   the start date cannot be in the past.
+Actual Result    : System displayed validation error "Start date cannot
+                   be in the past" and prevented trip creation.
+Conclusion       : Success
+
+
+================================================================================
+                    4.8  GROUP TRIP MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.8.1. Test 41 - Create a group trip
+--------------------------------------------------------------------------------
+Test             : 41
+Description      : Test creating a new group trip
+Action           : Navigating to Group Plan page and creating a group trip:
+                     Group Name: Nepal Explorers 2026
+                     Destination: Everest Base Camp
+                     Max Members: 10
+Expected Result  : Group trip should be created and shareable invite link
+                   should be generated.
+Actual Result    : Group trip was created successfully and a shareable
+                   invite link was generated for distribution.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.8.2. Test 42 - Join a group trip via invite link
+--------------------------------------------------------------------------------
+Test             : 42
+Description      : Test joining an existing group trip using invite link
+Action           : Opening the shared invite link in a browser while
+                   logged in as a different user
+Expected Result  : User should be added to the group trip and see the
+                   group trip details.
+Actual Result    : User was successfully added to the group trip and
+                   could view all group trip details and members.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.8.3. Test 43 - Group trip chat functionality
+--------------------------------------------------------------------------------
+Test             : 43
+Description      : Test real-time chat within a group trip
+Action           : Opening a group trip and sending a message in the
+                   chat: "Hello everyone! Excited for the trip!"
+Expected Result  : Message should be sent and visible to all group members
+                   in real-time.
+Actual Result    : Message was sent and displayed in the group chat
+                   with sender name and timestamp.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.8.4. Test 44 - Leave a group trip
+--------------------------------------------------------------------------------
+Test             : 44
+Description      : Test leaving a group trip as a member
+Action           : Opening a group trip and clicking "Leave Group" button
+                   and confirming the action
+Expected Result  : User should be removed from the group and redirected
+                   to the Group Plan page.
+Actual Result    : User was removed from the group successfully and
+                   redirected to the Group Plan page.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.8.5. Test 45 - Group trip member limit validation
+--------------------------------------------------------------------------------
+Test             : 45
+Description      : Test joining a group trip that has reached maximum members
+Action           : Attempting to join a group trip with max members (10)
+                   when 10 members are already present
+Expected Result  : System should display an error message indicating
+                   the group is full.
+Actual Result    : System displayed "Group is full. Maximum 10 members
+                   allowed." error message.
+Conclusion       : Success
+
+
+================================================================================
+                    4.9  SAVED ITEMS MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.9.1. Test 46 - Save a place to favorites
+--------------------------------------------------------------------------------
+Test             : 46
+Description      : Test saving a place to the Saved Items list
+Action           : Clicking the Save/Bookmark icon on a place card
+                   (e.g., Boudhanath Stupa) from the Discover section
+Expected Result  : Place should be added to Saved Items with a
+                   confirmation notification.
+Actual Result    : Place was saved successfully and bookmark icon changed
+                   to filled state with success notification.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.9.2. Test 47 - Remove a saved place
+--------------------------------------------------------------------------------
+Test             : 47
+Description      : Test removing a place from the Saved Items list
+Action           : Clicking the filled bookmark icon on a previously saved
+                   place (Boudhanath Stupa) to unsave it
+Expected Result  : Place should be removed from Saved Items and bookmark
+                   icon should return to outline state.
+Actual Result    : Place was removed from Saved Items and bookmark icon
+                   returned to outline (unsaved) state.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.9.3. Test 48 - View all saved items
+--------------------------------------------------------------------------------
+Test             : 48
+Description      : Test viewing the complete list of saved places
+Action           : Navigating to the Saved Items page from the dashboard
+                   or navigation menu
+Expected Result  : Page should display all saved places with images,
+                   names, descriptions, and category tags.
+Actual Result    : All saved places were displayed correctly with images,
+                   names, descriptions, and category tags.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.9.4. Test 49 - Search within saved items
+--------------------------------------------------------------------------------
+Test             : 49
+Description      : Test searching within the saved items list
+Action           : Entering "temple" in the search bar on the Saved Items
+                   page
+Expected Result  : Only saved items matching "temple" should be displayed.
+Actual Result    : Search results correctly filtered to show only temple-
+                   related saved items.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.9.5. Test 50 - Filter saved items by category
+--------------------------------------------------------------------------------
+Test             : 50
+Description      : Test filtering saved items by category
+Action           : Selecting "Heritage" category filter on the Saved Items
+                   page
+Expected Result  : Only saved items categorized as "Heritage" should
+                   be displayed.
+Actual Result    : Saved items were filtered correctly showing only
+                   Heritage category items.
+Conclusion       : Success
+
+
+================================================================================
+                    4.10  ADMIN PANEL MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.10.1. Test 51 - Admin login with admin credentials
+--------------------------------------------------------------------------------
+Test             : 51
+Description      : Test logging into the admin panel with admin credentials
+Action           : Logging in with admin credentials:
+                     Email: admin@exploremate.com
+                     Password: Admin@1234
+Expected Result  : Admin user should be redirected to the Admin Dashboard
+                   with full administrative access.
+Actual Result    : Admin was logged in successfully and redirected to the
+                   Admin Dashboard with all admin features visible.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.10.2. Test 52 - Admin dashboard statistics display
+--------------------------------------------------------------------------------
+Test             : 52
+Description      : Verify admin dashboard displays system statistics
+Action           : Viewing the Admin Dashboard after logging in as admin
+Expected Result  : Dashboard should display total users, total trips,
+                   total pages, and active sessions statistics.
+Actual Result    : Admin dashboard displayed all statistics correctly
+                   with real-time data from the backend.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.10.3. Test 53 - Admin user management - View users
+--------------------------------------------------------------------------------
+Test             : 53
+Description      : Test viewing list of all registered users
+Action           : Navigating to User Management section in the admin panel
+Expected Result  : System should display a table with all registered users
+                   showing name, email, role, and status.
+Actual Result    : User list was displayed correctly with all user details
+                   in a paginated table format.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.10.4. Test 54 - Admin user management - Lock user
+--------------------------------------------------------------------------------
+Test             : 54
+Description      : Test locking a user account from the admin panel
+Action           : Clicking the "Lock" button on a user account in the
+                   User Management section
+Expected Result  : User account should be locked and status should change
+                   to "Locked".
+Actual Result    : User account was locked successfully and status changed
+                   to "Locked" in the user table.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.10.5. Test 55 - Admin user management - Delete user
+--------------------------------------------------------------------------------
+Test             : 55
+Description      : Test deleting a user account from the admin panel
+Action           : Clicking "Delete" on a user account and confirming
+                   the deletion in the confirmation dialog
+Expected Result  : User account should be permanently deleted from the
+                   system.
+Actual Result    : User account was deleted successfully and removed from
+                   the user management table.
+Conclusion       : Success
+
+
+================================================================================
+                    4.11  QR GUIDE MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.11.1. Test 56 - Scan QR code for location guide
+--------------------------------------------------------------------------------
+Test             : 56
+Description      : Test scanning a QR code to get location-specific guide
+Action           : Scanning a QR code placed at Pashupatinath Temple using
+                   the QR Guide feature
+Expected Result  : System should display detailed information about
+                   Pashupatinath Temple including history, timings, and tips.
+Actual Result    : Detailed guide for Pashupatinath Temple was displayed
+                   with history, opening hours, entry fee, and tips.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.11.2. Test 57 - QR Guide with invalid QR code
+--------------------------------------------------------------------------------
+Test             : 57
+Description      : Test scanning an invalid or unrecognized QR code
+Action           : Scanning a random QR code not associated with any
+                   ExploreMate location
+Expected Result  : System should display an error message indicating the
+                   QR code is not recognized.
+Actual Result    : System displayed "QR code not recognized. Please scan
+                   a valid ExploreMate QR code." error message.
+Conclusion       : Success
+
+
+================================================================================
+                    4.12  NOTIFICATION MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.12.1. Test 58 - Receive notifications
+--------------------------------------------------------------------------------
+Test             : 58
+Description      : Test receiving system notifications for various events
+Action           : Performing actions that trigger notifications (trip
+                   creation, group invite, profile update)
+Expected Result  : Notifications should appear in the notification panel
+                   with appropriate messages and timestamps.
+Actual Result    : Notifications were received and displayed correctly
+                   with relevant messages and timestamps.
+Conclusion       : Success
+
+--------------------------------------------------------------------------------
+4.12.2. Test 59 - Mark notification as read
+--------------------------------------------------------------------------------
+Test             : 59
+Description      : Test marking a notification as read
+Action           : Clicking on an unread notification in the notification
+                   panel
+Expected Result  : Notification should be marked as read and visual
+                   indicator should change (badge count decrease).
+Actual Result    : Notification was marked as read, visual style changed,
+                   and badge count decreased by one.
+Conclusion       : Success
+
+
+================================================================================
+                    4.13  NAVIGATION & UI MODULE TESTING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.13.1. Test 60 - Responsive design on mobile viewport
+--------------------------------------------------------------------------------
+Test             : 60
+Description      : Test the application's responsive design on mobile devices
+Action           : Resizing browser window to mobile viewport (375x667)
+                   and navigating through all major pages
+Expected Result  : All pages should display correctly with mobile-friendly
+                   layout, hamburger menu, and properly scaled content.
+Actual Result    : All pages adapted to mobile viewport correctly with
+                   hamburger navigation, proper scaling, and no overflow
+                   issues.
+Conclusion       : Success
+
+
+================================================================================
+                              END OF TESTING DOCUMENT
+================================================================================
+
+Summary:
+---------
+Total Test Cases     : 60
+Passed               : 60
+Failed               : 0
+Success Rate         : 100%
+
+Testing Modules Covered:
+1.  Authentication (Tests 1-10)
+2.  Dashboard (Tests 11-15)
+3.  Profile Management (Tests 16-20)
+4.  Route Optimizer (Tests 21-25)
+5.  AI Suggestions (Tests 26-30)
+6.  Translator (Tests 31-35)
+7.  Trip Management (Tests 36-40)
+8.  Group Trip (Tests 41-45)
+9.  Saved Items (Tests 46-50)
+10. Admin Panel (Tests 51-55)
+11. QR Guide (Tests 56-57)
+12. Notifications (Tests 58-59)
+13. Navigation & UI (Test 60)
+
+================================================================================

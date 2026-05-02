@@ -26,6 +26,9 @@ export interface ContentStats {
   totalPages: number;
   publishedCount: number;
   draftCount: number;
+  totalMedia: number;
+  liveMediaCount: number;
+  archivedMediaCount: number;
 }
 
 export interface AdminUserUpdatePayload {
@@ -60,6 +63,11 @@ export async function deleteUser(id: string): Promise<void> {
   await del<any>(`/api/auth/admin/users/${id}`, true);
 }
 
+/** Admin: force reset a user's password */
+export async function adminResetPassword(id: string, newPassword: string): Promise<void> {
+  await put<any>(`/api/auth/admin/users/${id}/reset-password`, { newPassword }, true);
+}
+
 // ─── Content Admin Endpoints ──────────────────────────────────────────────────
 
 export interface MediaItem {
@@ -73,7 +81,7 @@ export interface MediaItem {
   updatedAt?: string;
 }
 
-/** Get content stats (page counts) */
+/** Get content stats (page + media counts) */
 export async function getContentStats(): Promise<ContentStats> {
   return await get<ContentStats>('/api/content/admin/stats', true);
 }
@@ -109,5 +117,10 @@ export async function updateMedia(id: string, data: Partial<MediaItem>): Promise
 
 export async function deleteMedia(id: string): Promise<void> {
   await del<void>(`/api/content/admin/media/${id}`, true);
+}
+
+/** Admin: delete ALL pages and media (danger zone) */
+export async function clearAllContent(): Promise<void> {
+  await del<void>('/api/content/admin/all', true);
 }
 

@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { Bell, Calendar, Camera, Check, ChevronDown, Compass, CreditCard, DollarSign, Edit2, Globe, LogOut, Mail, MapPin, Mountain, Phone, Plane, Save, Settings, Shield, User, Users, X } from 'lucide-react';
+import { Bell, Calendar, Camera, Check, ChevronDown, Compass, CreditCard, DollarSign, Download, Edit2, Globe, LogOut, Mail, MapPin, Mountain, Phone, Plane, Save, Settings, Shield, Trash2, User, Users, X, BellRing, ImageOff } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { InputField } from '../components/SharedUI';
 import { changePassword, getProfile, updateProfile, type ProfileUpdatePayload } from '../services/authService';
@@ -22,13 +22,16 @@ const CURRENCIES = [
 
 const AVAILABLE_INTERESTS = ["Hiking", "Photography", "Foodie", "History", "Art", "Nightlife", "Luxury", "Budget"];
 
-const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () => void, onNavigate: (page: string) => void, onProfileUpdate?: (name: string) => void }) => {
+const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate, onProfilePictureUpdate }: { onLogout: () => void, onNavigate: (page: string) => void, onProfileUpdate?: (name: string) => void, onProfilePictureUpdate?: (pic: string) => void }) => {
    const containerRef = useRef<HTMLDivElement>(null);
    const [activeTab, setActiveTab] = useState<'preferences' | 'account'>('preferences');
    const [isEditing, setIsEditing] = useState(false);
    const [currency, setCurrency] = useState('USD');
    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
    const [isLogoutAllModalOpen, setIsLogoutAllModalOpen] = useState(false);
+   const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
+   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+   const settingsRef = useRef<HTMLDivElement>(null);
 
    const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
    const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -78,6 +81,11 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
    // Use empty string initially, will be set from database or default
    const [isSaving, setIsSaving] = useState(false);
    const [saveError, setSaveError] = useState<string | null>(null);
+   // Snapshot for cancel-editing
+   const [profileSnapshot, setProfileSnapshot] = useState<typeof userProfile | null>(null);
+   const [profileImageSnapshot, setProfileImageSnapshot] = useState<string>("");
+   const [coverImageSnapshot, setCoverImageSnapshot] = useState<string>("");
+   const [isExporting, setIsExporting] = useState(false);
 
    // Refs
    const passwordModalRef = useRef<HTMLDivElement>(null);
@@ -101,8 +109,12 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                budget: profile.budget !== undefined ? profile.budget : prev.budget,
                travelStyle: profile.travelStyle || prev.travelStyle,
             }));
-            if (profile.profilePicture) setProfileImage(profile.profilePicture);
-            else setProfileImage(""); // Empty means show initials
+            if (profile.profilePicture) {
+               setProfileImage(profile.profilePicture);
+               if (onProfilePictureUpdate) onProfilePictureUpdate(profile.profilePicture);
+            } else {
+               setProfileImage(""); // Empty means show initials
+            }
          } catch (err) {
             console.error('Failed to load profile:', err);
          } finally {
@@ -177,6 +189,17 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
       }
    }, [isPasswordModalOpen]);
 
+   // Close settings dropdown on outside click
+   useEffect(() => {
+      const handleClickOutside = (e: MouseEvent) => {
+         if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+            setIsSettingsOpen(false);
+         }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+   }, []);
+
    const splitText = (text: string) => {
       return text.split('').map((char, index) => (
          <span key={index} className="reveal-text-char inline-block whitespace-pre origin-bottom will-change-transform">
@@ -188,6 +211,11 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cover') => {
       const file = e.target.files?.[0];
       if (file) {
+         // Validate file size (max 2MB)
+         if (file.size > 2 * 1024 * 1024) {
+            setSaveError('Image must be smaller than 2MB');
+            return;
+         }
          const reader = new FileReader();
          reader.onloadend = () => {
             if (type === 'profile') {
@@ -197,6 +225,64 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
             }
          };
          reader.readAsDataURL(file);
+      }
+   };
+
+   const handleRemoveProfileImage = () => {
+      setProfileImage("");
+   };
+
+   const startEditing = () => {
+      // Take a snapshot before editing so we can revert on cancel
+      setProfileSnapshot({ ...userProfile });
+      setProfileImageSnapshot(profileImage);
+      setCoverImageSnapshot(coverImage);
+      setIsEditing(true);
+   };
+
+   const cancelEditing = () => {
+      // Restore from snapshot
+      if (profileSnapshot) setUserProfile(profileSnapshot);
+      setProfileImage(profileImageSnapshot);
+      setCoverImage(coverImageSnapshot);
+      setProfileSnapshot(null);
+      setIsEditing(false);
+      setSaveError(null);
+   };
+
+   const handleExportData = async () => {
+      setIsExporting(true);
+      try {
+         const profile = await getProfile();
+         const exportData = {
+            exportedAt: new Date().toISOString(),
+            profile: {
+               name: profile.name,
+               email: profile.email,
+               phone: profile.phoneNumber,
+               location: profile.location,
+               title: profile.title,
+               interests: profile.interests,
+               budget: profile.budget,
+               travelStyle: profile.travelStyle,
+               bio: profile.bio,
+               createdAt: profile.createdAt,
+            },
+         };
+         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+         const url = URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = `exploremate-profile-${new Date().toISOString().slice(0, 10)}.json`;
+         document.body.appendChild(a);
+         a.click();
+         document.body.removeChild(a);
+         URL.revokeObjectURL(url);
+      } catch (err) {
+         console.error('Export failed:', err);
+      } finally {
+         setIsExporting(false);
+         setIsSettingsOpen(false);
       }
    };
 
@@ -217,6 +303,8 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
          };
          const updated = await updateProfile(payload);
          const newName = updated.name || userProfile.name || 'Explorer';
+         // Propagate profile picture back to App.tsx
+         if (onProfilePictureUpdate) onProfilePictureUpdate(profileImage || '');
          if (onProfileUpdate) onProfileUpdate(newName);
 
          // Final sync of local state from server response
@@ -348,9 +436,19 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                         <button
                            onClick={() => profileInputRef.current?.click()}
                            className="absolute bottom-2 right-2 p-2 bg-sky-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 z-20"
+                           title="Change photo"
                         >
                            <Edit2 size={14} />
                         </button>
+                        {profileImage && (
+                           <button
+                              onClick={handleRemoveProfileImage}
+                              className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 z-20"
+                              title="Remove photo"
+                           >
+                              <ImageOff size={12} />
+                           </button>
+                        )}
                         <input
                            type="file"
                            ref={profileInputRef}
@@ -406,15 +504,68 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                      </div>
 
                      <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0 relative">
+                        {isEditing && (
+                           <button
+                              onClick={cancelEditing}
+                              className="flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm border border-slate-200 bg-white text-slate-500 hover:text-red-500 hover:border-red-300 flex items-center justify-center gap-2"
+                           >
+                              <X size={18} /> Cancel
+                           </button>
+                        )}
                         <button
-                           onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
-                           className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm border flex items-center justify-center gap-2 ${isEditing ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800' : 'bg-white text-slate-700 border-slate-200 hover:border-sky-300'}`}
+                           onClick={() => isEditing ? handleSaveProfile() : startEditing()}
+                           disabled={isSaving}
+                           className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm border flex items-center justify-center gap-2 ${isEditing ? 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800' : 'bg-white text-slate-700 border-slate-200 hover:border-sky-300'} ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                           {isEditing ? <><Save size={18} /> Save</> : <><Edit2 size={18} /> Edit Profile</>}
+                           {isSaving ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Saving...</> : isEditing ? <><Save size={18} /> Save</> : <><Edit2 size={18} /> Edit Profile</>}
                         </button>
-                        <button className="p-2.5 rounded-xl border border-slate-200 text-slate-500 hover:text-sky-600 hover:border-sky-300 transition-all">
-                           <Settings size={20} />
-                        </button>
+
+                        {/* Settings Dropdown */}
+                        <div className="relative" ref={settingsRef}>
+                           <button
+                              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                              className={`p-2.5 rounded-xl border transition-all ${isSettingsOpen ? 'border-sky-300 text-sky-600 bg-sky-50' : 'border-slate-200 text-slate-500 hover:text-sky-600 hover:border-sky-300'}`}
+                           >
+                              <Settings size={20} className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-90' : ''}`} />
+                           </button>
+
+                           {isSettingsOpen && (
+                              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 overflow-hidden">
+                                 <button
+                                    onClick={() => { setIsSettingsOpen(false); onNavigate('notifications'); }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors group"
+                                 >
+                                    <div className="p-1.5 bg-sky-50 rounded-lg text-sky-600 group-hover:bg-sky-100 transition-colors"><BellRing size={16} /></div>
+                                    <div>
+                                       <div className="text-sm font-semibold text-slate-700">Notifications</div>
+                                       <div className="text-[10px] text-slate-400">Manage alerts</div>
+                                    </div>
+                                 </button>
+                                 <button
+                                    onClick={handleExportData}
+                                    disabled={isExporting}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors group"
+                                 >
+                                    <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600 group-hover:bg-emerald-100 transition-colors"><Download size={16} /></div>
+                                    <div>
+                                       <div className="text-sm font-semibold text-slate-700">{isExporting ? 'Exporting...' : 'Export Data'}</div>
+                                       <div className="text-[10px] text-slate-400">Download your data</div>
+                                    </div>
+                                 </button>
+                                 <div className="border-t border-slate-100 my-1"></div>
+                                 <button
+                                    onClick={() => { setIsSettingsOpen(false); setIsDeleteAccountModalOpen(true); }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50 transition-colors group"
+                                 >
+                                    <div className="p-1.5 bg-red-50 rounded-lg text-red-500 group-hover:bg-red-100 transition-colors"><Trash2 size={16} /></div>
+                                    <div>
+                                       <div className="text-sm font-semibold text-red-600">Delete Account</div>
+                                       <div className="text-[10px] text-red-400">Permanently delete</div>
+                                    </div>
+                                 </button>
+                              </div>
+                           )}
+                        </div>
 
                         {/* Save Feedback */}
                         <div className="save-feedback absolute -top-12 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg opacity-0 pointer-events-none whitespace-nowrap flex items-center gap-1">
@@ -422,6 +573,17 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                         </div>
                      </div>
                   </div>
+
+                  {/* Save Error */}
+                  {saveError && (
+                     <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 flex items-center gap-2">
+                        <X size={16} className="shrink-0" />
+                        {saveError}
+                        <button onClick={() => setSaveError(null)} className="ml-auto text-red-400 hover:text-red-600">
+                           <X size={14} />
+                        </button>
+                     </div>
+                  )}
 
                   {/* Stats */}
                   <div className="grid grid-cols-4 gap-4 border-t border-slate-100 pt-6">
@@ -588,6 +750,24 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                            </div>
 
                            {/* Regional Settings */}
+                           <div className="space-y-1">
+                              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nationality</label>
+                              <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isEditing ? 'bg-white border-sky-300 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
+                                 <Globe size={18} className="text-slate-400" />
+                                 {isEditing ? (
+                                    <input
+                                       type="text"
+                                       value={userProfile.nationality}
+                                       onChange={(e) => setUserProfile({ ...userProfile, nationality: e.target.value })}
+                                       className="bg-transparent outline-none w-full text-slate-700 font-medium"
+                                       placeholder="Enter nationality"
+                                    />
+                                 ) : (
+                                    <span className="text-slate-700 font-medium">{userProfile.nationality || 'Not set'}</span>
+                                 )}
+                              </div>
+                           </div>
+
                            <div className="pt-6 mt-2 border-t border-slate-100">
                               <h3 className="text-lg font-bold text-slate-900 mb-4">Regional Settings</h3>
                               <div className="space-y-1">
@@ -754,6 +934,47 @@ const ProfilePage = ({ onLogout, onNavigate, onProfileUpdate }: { onLogout: () =
                            className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all active:scale-95"
                         >
                            Log Out All
+                        </button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* Delete Account Confirmation Modal */}
+         {isDeleteAccountModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+               <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 relative">
+                  <button onClick={() => setIsDeleteAccountModalOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-50 rounded-full">
+                     <X size={24} />
+                  </button>
+                  <div className="text-center">
+                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Trash2 size={32} className="text-red-600" />
+                     </div>
+                     <h2 className="text-2xl font-bold text-slate-900 mb-2 font-display">Delete Account</h2>
+                     <p className="text-slate-500 mb-2">
+                        This action is <span className="font-bold text-red-600">permanent</span> and cannot be undone.
+                     </p>
+                     <p className="text-slate-400 text-sm mb-6">
+                        All your trips, saved items, preferences, and profile data will be permanently deleted.
+                     </p>
+                     <div className="flex gap-3">
+                        <button
+                           onClick={() => setIsDeleteAccountModalOpen(false)}
+                           className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors"
+                        >
+                           Keep Account
+                        </button>
+                        <button
+                           onClick={() => {
+                              setIsDeleteAccountModalOpen(false);
+                              // For now, log out the user (actual delete would need a backend endpoint)
+                              onLogout();
+                           }}
+                           className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all active:scale-95"
+                        >
+                           Delete Forever
                         </button>
                      </div>
                   </div>

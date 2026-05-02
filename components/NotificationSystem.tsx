@@ -110,7 +110,7 @@ export const NotificationBell = ({
   onClick?: () => void;
 }) => {
   const { state } = useApp();
-  const unreadCount = state.ui.notifications.filter(n => !n.read).length;
+  const unreadCount = state.ui.backendNotifications.filter(n => !n.read).length;
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {

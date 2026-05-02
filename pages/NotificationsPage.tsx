@@ -1,63 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { Bell, ArrowLeft, Check, Trash2, Calendar, User, Mountain, Compass, AlertTriangle, Info, Clock, CheckCircle2, X } from 'lucide-react';
-
-interface Notification {
-  id: number;
-  type: 'alert' | 'info' | 'success' | 'reminder';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    type: 'alert',
-    title: 'Rain Alert',
-    message: 'Heavy rain expected in Pokhara tomorrow. Consider rescheduling outdoor treks.',
-    time: '10 min ago',
-    read: false
-  },
-  {
-    id: 2,
-    type: 'success',
-    title: 'Trip Confirmed',
-    message: 'Your booking for "Kathmandu Heritage Walk" has been confirmed.',
-    time: '2 hours ago',
-    read: false
-  },
-  {
-    id: 3,
-    type: 'reminder',
-    title: 'Upcoming Flight',
-    message: 'Flight to Lukla departs in 2 days. Check your packing list.',
-    time: '5 hours ago',
-    read: true
-  },
-  {
-    id: 4,
-    type: 'info',
-    title: 'New Feature',
-    message: 'Try our new offline maps for the Annapurna Circuit.',
-    time: '1 day ago',
-    read: true
-  },
-  {
-    id: 5,
-    type: 'reminder',
-    title: 'Review your recent trip',
-    message: 'How was your visit to Swayambhunath? Leave a review to help others.',
-    time: '2 days ago',
-    read: true
-  }
-];
+import { Bell, ArrowLeft, Check, Trash2, Calendar, User, Mountain, Compass, AlertTriangle, Info, Clock, CheckCircle2 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { clearAllNotifications, deleteNotification, markAsRead, markAllAsRead } from '../services/notificationService';
 
 const NotificationsPage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const { state, dispatch, markBackendNotificationRead, markAllBackendNotificationsRead, removeBackendNotification, clearAllBackendNotifications } = useApp();
+  const notifications = state.ui.backendNotifications;
+  
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [isClearing, setIsClearing] = useState(false);
 
   const filteredNotifications = filter === 'all' ? notifications : notifications.filter(n => !n.read);
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -90,24 +43,63 @@ const NotificationsPage = ({ onNavigate }: { onNavigate: (page: string) => void 
     }, containerRef);
     
     return () => ctx.revert();
-  }, [filter]); // Re-animate when filter changes
+  }, [filter, notifications.length]); // Re-animate when filter or length changes
 
-  const handleMarkAllRead = () => {
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const handleMarkAllRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+      // Optimistic update
+      markAllBackendNotificationsRead();
+      // API call
+      await markAllAsRead();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
 
-  const deleteNotification = (id: number, e: React.MouseEvent) => {
-      e.stopPropagation();
-      setNotifications(prev => prev.filter(n => n.id !== id));
+  const handleClearAll = async () => {
+    if (notifications.length === 0 || isClearing) return;
+    setIsClearing(true);
+    try {
+      // Optimistic update
+      clearAllBackendNotifications();
+      // API call
+      await clearAllNotifications();
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+    } finally {
+      setIsClearing(false);
+    }
   };
 
-  const toggleRead = (id: number) => {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: !n.read } : n));
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      // Optimistic update
+      removeBackendNotification(id);
+      // API call
+      await deleteNotification(id);
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+    }
+  };
+
+  const toggleRead = async (id: string, isCurrentlyRead: boolean) => {
+    if (isCurrentlyRead) return; // Only toggle from unread to read, not back
+    try {
+      // Optimistic update
+      markBackendNotificationRead(id);
+      // API call
+      await markAsRead(id);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
       switch(type) {
-          case 'alert': return <AlertTriangle size={20} className="text-white" />;
+          case 'error':
+          case 'warning': return <AlertTriangle size={20} className="text-white" />;
           case 'success': return <CheckCircle2 size={20} className="text-white" />;
           case 'reminder': return <Clock size={20} className="text-white" />;
           default: return <Info size={20} className="text-white" />;
@@ -116,11 +108,25 @@ const NotificationsPage = ({ onNavigate }: { onNavigate: (page: string) => void 
 
   const getNotificationColor = (type: string) => {
       switch(type) {
-          case 'alert': return 'bg-red-500 shadow-red-500/30';
+          case 'error': return 'bg-red-500 shadow-red-500/30';
+          case 'warning': return 'bg-amber-500 shadow-amber-500/30';
           case 'success': return 'bg-emerald-500 shadow-emerald-500/30';
           case 'reminder': return 'bg-orange-500 shadow-orange-500/30';
           default: return 'bg-sky-500 shadow-sky-500/30';
       }
+  };
+  
+  const getRelativeTime = (dateStr: string): string => {
+    const target = new Date(dateStr).getTime();
+    if (Number.isNaN(target)) return 'recently';
+    const diffMs = Date.now() - target;
+    const minute = 60_000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (diffMs < minute) return 'just now';
+    if (diffMs < hour) return `${Math.floor(diffMs / minute)}m ago`;
+    if (diffMs < day) return `${Math.floor(diffMs / hour)}h ago`;
+    return `${Math.floor(diffMs / day)}d ago`;
   };
 
   const navItems = [
@@ -147,12 +153,26 @@ const NotificationsPage = ({ onNavigate }: { onNavigate: (page: string) => void 
                 <p className="text-xs text-slate-500 font-bold">{unreadCount} unread alerts</p>
              </div>
          </div>
-         <button 
-            onClick={handleMarkAllRead} 
-            className="text-xs font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition-colors flex items-center gap-1"
-         >
-            <Check size={14} /> Mark all read
-         </button>
+         <div className="flex items-center gap-2">
+           <button 
+              onClick={handleClearAll} 
+              disabled={isClearing || notifications.length === 0}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+                notifications.length === 0 ? 'text-slate-400 bg-slate-100 cursor-not-allowed' : 'text-red-600 bg-red-50 hover:bg-red-100'
+              }`}
+           >
+              <Trash2 size={14} /> <span className="hidden sm:inline">Clear All</span>
+           </button>
+           <button 
+              onClick={handleMarkAllRead} 
+              disabled={unreadCount === 0}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+                unreadCount === 0 ? 'text-slate-400 bg-slate-100 cursor-not-allowed' : 'text-sky-600 bg-sky-50 hover:bg-sky-100'
+              }`}
+           >
+              <Check size={14} /> <span className="hidden sm:inline">Mark all read</span>
+           </button>
+         </div>
       </div>
 
       {/* Main Content */}
@@ -180,8 +200,8 @@ const NotificationsPage = ({ onNavigate }: { onNavigate: (page: string) => void 
                 filteredNotifications.map((note) => (
                     <div 
                         key={note.id} 
-                        onClick={() => toggleRead(note.id)}
-                        className={`notif-item group relative p-5 rounded-[1.5rem] border transition-all duration-300 cursor-pointer flex gap-5 items-start ${
+                        onClick={() => toggleRead(note.id, note.read)}
+                        className={`notif-item group relative p-5 rounded-[1.5rem] border transition-all duration-300 ${!note.read ? 'cursor-pointer' : ''} flex gap-5 items-start ${
                             !note.read 
                             ? 'bg-white border-sky-100 shadow-lg shadow-sky-500/5' 
                             : 'bg-slate-50/50 border-slate-100 hover:bg-white hover:shadow-md'
@@ -191,14 +211,14 @@ const NotificationsPage = ({ onNavigate }: { onNavigate: (page: string) => void 
                             {getNotificationIcon(note.type)}
                         </div>
                         
-                        <div className="flex-grow pt-1">
+                        <div className="flex-grow pt-1 min-w-0">
                             <div className="flex justify-between items-start mb-1">
-                                <h3 className={`font-bold text-lg ${!note.read ? 'text-slate-900' : 'text-slate-600'}`}>
-                                    {note.title}
+                                <h3 className={`font-bold text-lg truncate pr-2 ${!note.read ? 'text-slate-900' : 'text-slate-600'}`}>
+                                    {note.title || note.message}
                                 </h3>
-                                <span className="text-xs font-bold text-slate-400 whitespace-nowrap ml-2">{note.time}</span>
+                                <span className="text-xs font-bold text-slate-400 whitespace-nowrap ml-2 mt-1">{getRelativeTime(note.createdAt)}</span>
                             </div>
-                            <p className="text-sm text-slate-500 leading-relaxed max-w-[90%]">
+                            <p className="text-sm text-slate-500 leading-relaxed pr-8">
                                 {note.message}
                             </p>
                         </div>
@@ -210,8 +230,9 @@ const NotificationsPage = ({ onNavigate }: { onNavigate: (page: string) => void 
 
                         {/* Delete Button (Hover) */}
                         <button 
-                            onClick={(e) => deleteNotification(note.id, e)}
+                            onClick={(e) => handleDelete(note.id, e)}
                             className="absolute right-2 top-2 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                            title="Delete notification"
                         >
                             <Trash2 size={16} />
                         </button>

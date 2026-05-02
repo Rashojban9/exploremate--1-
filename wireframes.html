@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExploreMate — 25 Wireframes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-alt: #334155;
+      --border: #475569;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #38bdf8;
+      --accent-2: #818cf8;
+      --accent-3: #a78bfa;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --pink: #f472b6;
+      --orange: #fb923c;
+      --wire-bg: #f8fafc;
+      --wire-border: #cbd5e1;
+      --wire-text: #334155;
+      --wire-placeholder: #94a3b8;
+      --wire-accent: #3b82f6;
+      --wire-light: #e2e8f0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Hero Header ── */
+    .hero {
+      padding: 60px 20px 40px;
+      text-align: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 50%, rgba(129, 140, 248, 0.08) 0%, transparent 50%);
+      animation: heroFloat 20s ease-in-out infinite;
+    }
+    @keyframes heroFloat {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(-2%, 2%); }
+    }
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2), var(--accent-3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+      position: relative;
+      letter-spacing: -1px;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 24px;
+      position: relative;
+    }
+    .hero .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 50px;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.85rem;
+      position: relative;
+    }
+
+    /* ── Navigation ── */
+    .nav-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+      padding: 0 20px;
+    }
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 12px 0;
+      scrollbar-width: none;
+    }
+    .nav-inner::-webkit-scrollbar { display: none; }
+    .nav-btn {
+      flex-shrink: 0;
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s;
+      white-space: nowrap;
+    }
+    .nav-btn:hover {
+      background: rgba(56, 189, 248, 0.08);
+      color: var(--accent);
+      border-color: rgba(56, 189, 248, 0.15);
+    }
+    .nav-btn.active {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      border-color: rgba(56, 189, 248, 0.3);
+      font-weight: 600;
+    }
+    .nav-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      font-size: 0.65rem;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+
+    /* ── Grid ── */
+    .grid-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+      gap: 32px;
+    }
+    @media (max-width: 560px) {
+      .grid-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Wireframe Card ── */
+    .wf-card {
+      background: var(--bg-card);
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: cardIn 0.6s ease-out both;
+    }
+    .wf-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(56, 189, 248, 0.3);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 40px rgba(56, 189, 248, 0.05);
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .wf-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+    }
+    .wf-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wf-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.8rem;
+      color: white;
+    }
+    .wf-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+    .wf-category {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .cat-public { background: rgba(56, 189, 248, 0.12); color: var(--accent); }
+    .cat-auth { background: rgba(129, 140, 248, 0.12); color: var(--accent-2); }
+    .cat-core { background: rgba(52, 211, 153, 0.12); color: var(--success); }
+    .cat-feature { background: rgba(251, 191, 36, 0.12); color: var(--warning); }
+    .cat-admin { background: rgba(248, 113, 113, 0.12); color: var(--danger); }
+    .cat-info { background: rgba(244, 114, 182, 0.12); color: var(--pink); }
+    .cat-social { background: rgba(251, 146, 60, 0.12); color: var(--orange); }
+
+    /* ── Wireframe Canvas ── */
+    .wf-canvas {
+      background: var(--wire-bg);
+      margin: 12px;
+      border-radius: 12px;
+      height: 340px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--wire-border);
+    }
+
+    /* ── Wireframe Elements ── */
+    .wf-topbar {
+      height: 36px;
+      background: #fff;
+      border-bottom: 1.5px solid var(--wire-border);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+    }
+    .wf-logo {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--wire-accent);
+    }
+    .wf-nav-links {
+      display: flex;
+      gap: 12px;
+      margin-left: auto;
+    }
+    .wf-nav-link {
+      width: 36px;
+      height: 6px;
+      background: var(--wire-light);
+      border-radius: 3px;
+    }
+    .wf-btn-sm {
+      padding: 4px 12px;
+      border-radius: 5px;
+      font-size: 0.55rem;
+      font-weight: 600;
+      border: none;
+      color: #fff;
+      background: var(--wire-accent);
+    }
+    .wf-btn-outline {
+      padding: 4px 12px;
+      border-radius: 5px;
+      font-size: 0.55rem;
+      font-weight: 600;
+      border: 1.5px solid var(--wire-accent);
+      color: var(--wire-accent);
+      background: transparent;
+    }
+
+    .wf-section { padding: 10px 14px; }
+    .wf-heading {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--wire-text);
+      margin-bottom: 6px;
+    }
+    .wf-subheading {
+      font-size: 0.55rem;
+      color: var(--wire-placeholder);
+      margin-bottom: 8px;
+    }
+    .wf-line {
+      height: 5px;
+      background: var(--wire-light);
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+    .wf-line-short { width: 60%; }
+    .wf-line-medium { width: 80%; }
+    .wf-line-xs { width: 40%; }
+    .wf-line-dark {
+      background: #cbd5e1;
+    }
+
+    .wf-card-inner {
+      background: #fff;
+      border: 1.5px solid var(--wire-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+    }
+    .wf-input {
+      height: 24px;
+      background: #f1f5f9;
+      border: 1.5px solid var(--wire-border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      font-size: 0.5rem;
+      color: var(--wire-placeholder);
+    }
+    .wf-input-icon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--wire-border);
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    .wf-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--wire-accent), #818cf8);
+      flex-shrink: 0;
+    }
+    .wf-avatar-sm {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+      flex-shrink: 0;
+    }
+    .wf-img-placeholder {
+      background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--wire-placeholder);
+      font-size: 0.6rem;
+      font-weight: 600;
+    }
+    .wf-icon-box {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(59, 130, 246, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+    .wf-stat {
+      text-align: center;
+    }
+    .wf-stat-num {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--wire-accent);
+    }
+    .wf-stat-label {
+      font-size: 0.45rem;
+      color: var(--wire-placeholder);
+      font-weight: 500;
+    }
+    .wf-sidebar {
+      width: 60px;
+      background: #fff;
+      border-right: 1.5px solid var(--wire-border);
+      padding: 8px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .wf-sidebar-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: #f1f5f9;
+    }
+    .wf-sidebar-icon.active {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1.5px solid rgba(59, 130, 246, 0.3);
+    }
+    .wf-badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.45rem;
+      font-weight: 700;
+      background: rgba(52, 211, 153, 0.15);
+      color: #059669;
+    }
+    .wf-tag {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.45rem;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: var(--wire-text);
+      border: 1px solid var(--wire-border);
+    }
+    .wf-map {
+      background: linear-gradient(135deg, #dbeafe, #e0f2fe, #ede9fe);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .wf-map::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(0deg, rgba(203,213,225,0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(203,213,225,0.3) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    .wf-map-pin {
+      width: 10px;
+      height: 14px;
+      background: #ef4444;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      position: absolute;
+      z-index: 1;
+    }
+    .wf-map-route {
+      position: absolute;
+      border: 2px dashed var(--wire-accent);
+      border-radius: 50%;
+      z-index: 1;
+    }
+    .wf-divider {
+      height: 1px;
+      background: var(--wire-border);
+      margin: 6px 0;
+    }
+    .wf-progress {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .wf-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--wire-accent), #818cf8);
+      border-radius: 3px;
+    }
+    .wf-chat-bubble {
+      padding: 6px 10px;
+      border-radius: 10px 10px 10px 2px;
+      background: #f1f5f9;
+      font-size: 0.45rem;
+      color: var(--wire-text);
+      max-width: 70%;
+      margin-bottom: 4px;
+    }
+    .wf-chat-bubble.sent {
+      background: var(--wire-accent);
+      color: white;
+      border-radius: 10px 10px 2px 10px;
+      margin-left: auto;
+    }
+    .wf-tab {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.5rem;
+      font-weight: 600;
+      color: var(--wire-placeholder);
+      background: transparent;
+    }
+    .wf-tab.active {
+      background: var(--wire-accent);
+      color: white;
+    }
+    .wf-qr {
+      width: 50px;
+      height: 50px;
+      background: repeating-conic-gradient(var(--wire-text) 0% 25%, white 0% 50%) 0 0 / 10px 10px;
+      border-radius: 4px;
+    }
+    .wf-toggle {
+      width: 28px;
+      height: 14px;
+      border-radius: 7px;
+      background: var(--wire-accent);
+      position: relative;
+    }
+    .wf-toggle::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      right: 2px;
+      top: 2px;
+    }
+    .wf-table-row {
+      display: flex;
+      align-items: center;
+      padding: 4px 0;
+      gap: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.45rem;
+      color: var(--wire-text);
+    }
+    .wf-stars {
+      color: #fbbf24;
+      font-size: 0.5rem;
+      letter-spacing: 1px;
+    }
+    .wf-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 28px;
+      background: #fff;
+      border-top: 1.5px solid var(--wire-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 0 12px;
+    }
+    .wf-footer-link {
+      width: 30px;
+      height: 4px;
+      background: var(--wire-light);
+      border-radius: 2px;
+    }
+
+    /* Flex utilities */
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .items-start { align-items: flex-start; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .gap-2 { gap: 2px; }
+    .gap-4 { gap: 4px; }
+    .gap-6 { gap: 6px; }
+    .gap-8 { gap: 8px; }
+    .gap-10 { gap: 10px; }
+    .gap-12 { gap: 12px; }
+    .flex-1 { flex: 1; }
+    .w-full { width: 100%; }
+    .text-center { text-align: center; }
+    .ml-auto { margin-left: auto; }
+    .overflow-hidden { overflow: hidden; }
+    .relative { position: relative; }
+
+    /* ── Description Footer ── */
+    .wf-desc {
+      padding: 14px 20px 18px;
+      border-top: 1px solid rgba(71, 85, 105, 0.15);
+    }
+    .wf-desc p {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ── Bottom Footer ── */
+    .page-footer {
+      text-align: center;
+      padding: 40px 20px;
+      border-top: 1px solid rgba(71, 85, 105, 0.2);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ Hero ═══ -->
+  <div class="hero">
+    <div class="badge">✈️ ExploreMate Wireframe Suite</div>
+    <h1 style="margin-top: 20px;">25 Wireframes</h1>
+    <p>Complete UI wireframe collection for the ExploreMate travel platform — covering every screen from landing to admin dashboard.</p>
+  </div>
+
+  <!-- ═══ Sticky Nav ═══ -->
+  <div class="nav-bar">
+    <div class="nav-inner" id="navInner"></div>
+  </div>
+
+  <!-- ═══ Wireframe Grid ═══ -->
+  <div class="grid-container" id="wireframeGrid"></div>
+
+  <!-- ═══ Footer ═══ -->
+  <div class="page-footer">
+    <p>ExploreMate © 2026 — 25 Wireframes &middot; Built with ❤️</p>
+  </div>
+
+  <script>
+    // ── Wireframe Data ──
+    const wireframes = [
+      {
+        id: 1,
+        title: "Splash Screen",
+        category: "public",
+        catLabel: "Public",
+        color: "#38bdf8",
+        desc: "Animated intro with brand logo, plane animation along a curved path, and a circular progress indicator.",
+        render: (c) => {
+          c.innerHTML = `
+            <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e1b4b);">
+              <svg width="80" height="40" viewBox="0 0 200 60" style="margin-bottom:12px;">
+                <path d="M 10,50 C 60,50 80,10 140,10 S 190,30 200,20" fill="none" stroke="rgba(56,189,248,0.5)" stroke-width="2" stroke-dasharray="5,5"/>
+                <circle cx="140" cy="10" r="5" fill="#38bdf8"/>
+              </svg>
+              <div style="display:flex;gap:3px;margin-bottom:16px;">
+                ${Array.from('ExploreMate').map(c=>`<span style="color:white;font-weight:800;font-size:1rem;">${c}</span>`).join('')}
+              </div>
+              <svg width="32" height="32" style="transform:rotate(-90deg);">
+                <circle cx="16" cy="16" r="12" stroke="rgba(255,255,255,0.1)" stroke-width="3" fill="none"/>
+                <circle cx="16" cy="16" r="12" stroke="#38bdf8" stroke-width="3" fill="none" stroke-dasharray="50 75" stroke-linecap="round"/>
+              </svg>
+            </div>`;
+        }
+      },
+      {
+        id: 2,
+        title: "Landing Page",
+        category: "public",
+        catLabel: "Public",
+        color: "#38bdf8",
+        desc: "Hero section with CTA, feature highlights, destination cards, and footer navigation.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar">
+              <div class="wf-logo"></div>
+              <div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div>
+              <div class="wf-btn-sm">Sign Up</div>
+            </div>
+            <div style="padding:16px 14px;text-align:center;">
+              <div class="wf-heading" style="font-size:0.85rem;margin-bottom:4px;">Discover Nepal Like Never Before</div>
+              <div class="wf-subheading">AI-powered travel companion for unforgettable adventures</div>
+              <div style="display:flex;gap:6px;justify-content:center;margin:10px 0;">
+                <div class="wf-btn-sm">Get Started</div>
+                <div class="wf-btn-outline">Learn More</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;padding:0 14px;margin-bottom:10px;">
+              <div class="wf-img-placeholder" style="flex:1;height:70px;">🏔️ Everest</div>
+              <div class="wf-img-placeholder" style="flex:1;height:70px;">🛕 Temples</div>
+              <div class="wf-img-placeholder" style="flex:1;height:70px;">🌿 Pokhara</div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;padding:0 14px;">
+              <div class="wf-stat"><div class="wf-stat-num">50+</div><div class="wf-stat-label">Destinations</div></div>
+              <div class="wf-stat"><div class="wf-stat-num">10K+</div><div class="wf-stat-label">Users</div></div>
+              <div class="wf-stat"><div class="wf-stat-num">4.9</div><div class="wf-stat-label">Rating</div></div>
+            </div>
+            <div class="wf-footer"><div class="wf-footer-link"></div><div class="wf-footer-link"></div><div class="wf-footer-link"></div><div class="wf-footer-link"></div></div>`;
+        }
+      },
+      {
+        id: 3,
+        title: "Login Page",
+        category: "auth",
+        catLabel: "Auth",
+        color: "#818cf8",
+        desc: "Email and password fields, social login options, remember me toggle, and forgot password link.",
+        render: (c) => {
+          c.innerHTML = `
+            <div style="display:flex;height:100%;">
+              <div class="wf-img-placeholder" style="width:45%;height:100%;border-radius:0;">🌄</div>
+              <div style="flex:1;padding:20px 16px;display:flex;flex-direction:column;justify-content:center;">
+                <div class="wf-heading" style="font-size:0.85rem;">Welcome Back</div>
+                <div class="wf-subheading" style="margin-bottom:12px;">Sign in to continue exploring</div>
+                <div class="wf-input"><div class="wf-input-icon"></div>Email address</div>
+                <div class="wf-input"><div class="wf-input-icon"></div>Password</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <div style="display:flex;align-items:center;gap:4px;"><div class="wf-toggle" style="width:20px;height:10px;"></div><span style="font-size:0.4rem;color:#94a3b8;">Remember me</span></div>
+                  <span style="font-size:0.4rem;color:#3b82f6;">Forgot password?</span>
+                </div>
+                <div class="wf-btn-sm" style="text-align:center;padding:6px;margin-bottom:8px;border-radius:6px;">Sign In</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="flex:1;height:1px;background:#e2e8f0;"></div><span style="font-size:0.4rem;color:#94a3b8;">OR</span><div style="flex:1;height:1px;background:#e2e8f0;"></div></div>
+                <div style="display:flex;gap:6px;">
+                  <div style="flex:1;padding:4px;border:1px solid #e2e8f0;border-radius:6px;text-align:center;font-size:0.45rem;color:#64748b;">Google</div>
+                  <div style="flex:1;padding:4px;border:1px solid #e2e8f0;border-radius:6px;text-align:center;font-size:0.45rem;color:#64748b;">GitHub</div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 4,
+        title: "Signup Page",
+        category: "auth",
+        catLabel: "Auth",
+        color: "#818cf8",
+        desc: "Registration form with name, email, password fields, terms acceptance, and social sign-up.",
+        render: (c) => {
+          c.innerHTML = `
+            <div style="display:flex;height:100%;">
+              <div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;">
+                <div class="wf-heading" style="font-size:0.85rem;">Create Account</div>
+                <div class="wf-subheading" style="margin-bottom:10px;">Join thousands of explorers</div>
+                <div class="wf-input"><div class="wf-input-icon"></div>Full Name</div>
+                <div class="wf-input"><div class="wf-input-icon"></div>Email address</div>
+                <div class="wf-input"><div class="wf-input-icon"></div>Password</div>
+                <div class="wf-input"><div class="wf-input-icon"></div>Confirm Password</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">
+                  <div style="width:12px;height:12px;border:1.5px solid #cbd5e1;border-radius:3px;"></div>
+                  <span style="font-size:0.4rem;color:#94a3b8;">I agree to Terms & Conditions</span>
+                </div>
+                <div class="wf-btn-sm" style="text-align:center;padding:6px;border-radius:6px;">Create Account</div>
+              </div>
+              <div class="wf-img-placeholder" style="width:45%;height:100%;border-radius:0;">🏞️</div>
+            </div>`;
+        }
+      },
+      {
+        id: 5,
+        title: "Forgot Password",
+        category: "auth",
+        catLabel: "Auth",
+        color: "#818cf8",
+        desc: "Email input for password reset link with confirmation message and back to login link.",
+        render: (c) => {
+          c.innerHTML = `
+            <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+              <div style="width:40px;height:40px;border-radius:50%;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:12px;">🔒</div>
+              <div class="wf-heading" style="text-align:center;">Forgot Password?</div>
+              <div class="wf-subheading" style="text-align:center;margin-bottom:16px;max-width:220px;">Enter your email and we'll send you a reset link</div>
+              <div style="width:100%;max-width:240px;">
+                <div class="wf-input"><div class="wf-input-icon"></div>Email address</div>
+                <div class="wf-btn-sm" style="text-align:center;padding:6px;border-radius:6px;width:100%;margin-bottom:10px;">Send Reset Link</div>
+                <div style="text-align:center;font-size:0.45rem;color:#3b82f6;">← Back to Login</div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 6,
+        title: "Reset Password",
+        category: "auth",
+        catLabel: "Auth",
+        color: "#818cf8",
+        desc: "New password and confirm password fields with strength indicator and token validation.",
+        render: (c) => {
+          c.innerHTML = `
+            <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+              <div style="width:40px;height:40px;border-radius:50%;background:rgba(52,211,153,0.1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:12px;">🔑</div>
+              <div class="wf-heading" style="text-align:center;">Reset Password</div>
+              <div class="wf-subheading" style="text-align:center;margin-bottom:16px;">Create a strong new password</div>
+              <div style="width:100%;max-width:240px;">
+                <div class="wf-input"><div class="wf-input-icon"></div>New Password</div>
+                <div class="wf-progress" style="margin-bottom:6px;"><div class="wf-progress-bar" style="width:70%;"></div></div>
+                <div style="font-size:0.4rem;color:#059669;margin-bottom:6px;">Strong password ✓</div>
+                <div class="wf-input"><div class="wf-input-icon"></div>Confirm Password</div>
+                <div class="wf-btn-sm" style="text-align:center;padding:6px;border-radius:6px;width:100%;">Reset Password</div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 7,
+        title: "Dashboard",
+        category: "core",
+        catLabel: "Core",
+        color: "#34d399",
+        desc: "Central hub showing activity stats, recent trips, notifications, quick actions, and saved items.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar">
+              <div class="wf-logo"></div>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                <div style="width:16px;height:16px;border-radius:50%;background:#f1f5f9;position:relative;"><div style="width:5px;height:5px;border-radius:50%;background:#ef4444;position:absolute;top:-1px;right:-1px;"></div></div>
+                <div class="wf-avatar-sm"></div>
+              </div>
+            </div>
+            <div style="display:flex;height:calc(100% - 36px);">
+              <div class="wf-sidebar">
+                <div class="wf-sidebar-icon active"></div>
+                <div class="wf-sidebar-icon"></div>
+                <div class="wf-sidebar-icon"></div>
+                <div class="wf-sidebar-icon"></div>
+                <div class="wf-sidebar-icon"></div>
+              </div>
+              <div style="flex:1;padding:10px;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <div class="wf-heading">Welcome back, Explorer!</div>
+                  <div class="wf-btn-sm">+ New Trip</div>
+                </div>
+                <div style="display:flex;gap:6px;margin-bottom:8px;">
+                  <div class="wf-card-inner" style="flex:1;text-align:center;"><div class="wf-stat-num" style="font-size:0.7rem;">12</div><div class="wf-stat-label">Trips</div></div>
+                  <div class="wf-card-inner" style="flex:1;text-align:center;"><div class="wf-stat-num" style="font-size:0.7rem;">48</div><div class="wf-stat-label">Saved</div></div>
+                  <div class="wf-card-inner" style="flex:1;text-align:center;"><div class="wf-stat-num" style="font-size:0.7rem;">5</div><div class="wf-stat-label">Groups</div></div>
+                  <div class="wf-card-inner" style="flex:1;text-align:center;"><div class="wf-stat-num" style="font-size:0.7rem;">★4.8</div><div class="wf-stat-label">Rating</div></div>
+                </div>
+                <div class="wf-heading" style="font-size:0.55rem;">Recent Activity</div>
+                <div class="wf-card-inner" style="display:flex;align-items:center;gap:6px;">
+                  <div class="wf-img-placeholder" style="width:36px;height:36px;font-size:0.5rem;">🏔</div>
+                  <div><div style="font-size:0.5rem;font-weight:600;color:#334155;">Everest Base Camp</div><div style="font-size:0.4rem;color:#94a3b8;">3 days ago</div></div>
+                  <div class="wf-badge ml-auto">Completed</div>
+                </div>
+                <div class="wf-card-inner" style="display:flex;align-items:center;gap:6px;">
+                  <div class="wf-img-placeholder" style="width:36px;height:36px;font-size:0.5rem;">🛕</div>
+                  <div><div style="font-size:0.5rem;font-weight:600;color:#334155;">Kathmandu Valley</div><div style="font-size:0.4rem;color:#94a3b8;">1 week ago</div></div>
+                  <div class="wf-badge ml-auto" style="background:rgba(59,130,246,0.1);color:#3b82f6;">Planned</div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 8,
+        title: "Profile Page",
+        category: "core",
+        catLabel: "Core",
+        color: "#34d399",
+        desc: "User profile with avatar upload, editable bio, travel preferences, and account settings.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div><div class="wf-avatar-sm"></div></div>
+            <div style="padding:12px 14px;">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;position:relative;">
+                  <span style="font-size:1rem;">👤</span>
+                  <div style="width:14px;height:14px;border-radius:50%;background:#3b82f6;position:absolute;bottom:-2px;right:-2px;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:0.35rem;color:white;">📷</div>
+                </div>
+                <div>
+                  <div style="font-size:0.7rem;font-weight:700;color:#334155;">Rasho Explorer</div>
+                  <div style="font-size:0.45rem;color:#94a3b8;">rasho@exploremate.com</div>
+                  <div style="display:flex;gap:4px;margin-top:2px;">
+                    <div class="wf-tag">🏔️ Trekker</div>
+                    <div class="wf-tag">📸 Photographer</div>
+                  </div>
+                </div>
+                <div class="wf-btn-outline" style="margin-left:auto;">Edit</div>
+              </div>
+              <div class="wf-heading" style="font-size:0.55rem;">Personal Information</div>
+              <div class="wf-input">Full Name</div>
+              <div class="wf-input">Phone Number</div>
+              <div class="wf-input">Location</div>
+              <div class="wf-heading" style="font-size:0.55rem;margin-top:4px;">Travel Preferences</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                <div class="wf-tag">🏔 Mountains</div>
+                <div class="wf-tag">🛕 Temples</div>
+                <div class="wf-tag">🌿 Nature</div>
+                <div class="wf-tag">🍜 Food</div>
+                <div class="wf-tag">+ Add</div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 9,
+        title: "AI Suggestion Page",
+        category: "feature",
+        catLabel: "Feature",
+        color: "#fbbf24",
+        desc: "AI-powered travel recommendations with chat interface, preference filters, and itinerary cards.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div style="margin-left:auto;"><div class="wf-btn-sm">✨ AI Suggestions</div></div></div>
+            <div style="display:flex;height:calc(100% - 36px);">
+              <div style="width:140px;background:#fff;border-right:1.5px solid #e2e8f0;padding:8px;">
+                <div style="font-size:0.5rem;font-weight:700;color:#334155;margin-bottom:6px;">Preferences</div>
+                <div class="wf-input" style="font-size:0.4rem;">🗓️ 5 days</div>
+                <div class="wf-input" style="font-size:0.4rem;">💰 Budget: Mid</div>
+                <div class="wf-input" style="font-size:0.4rem;">🏔️ Adventure</div>
+                <div style="font-size:0.5rem;font-weight:700;color:#334155;margin:6px 0 4px;">Interests</div>
+                <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                  <div class="wf-tag" style="font-size:0.35rem;">Trekking</div>
+                  <div class="wf-tag" style="font-size:0.35rem;">Culture</div>
+                  <div class="wf-tag" style="font-size:0.35rem;">Food</div>
+                </div>
+              </div>
+              <div style="flex:1;padding:8px;display:flex;flex-direction:column;">
+                <div style="flex:1;overflow:hidden;">
+                  <div class="wf-chat-bubble">🤖 Hi! I'll help you plan your trip. What are you looking for?</div>
+                  <div class="wf-chat-bubble sent">I want a 5-day trek near Pokhara</div>
+                  <div class="wf-chat-bubble">Here are my top recommendations:</div>
+                  <div class="wf-card-inner" style="display:flex;gap:6px;margin-top:4px;">
+                    <div class="wf-img-placeholder" style="width:40px;height:40px;font-size:0.4rem;">🏔</div>
+                    <div><div style="font-size:0.45rem;font-weight:600;">Annapurna Circuit</div><div style="font-size:0.35rem;color:#94a3b8;">5 days • Moderate</div><div class="wf-stars">★★★★★</div></div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:4px;margin-top:6px;">
+                  <div class="wf-input" style="flex:1;margin:0;">Type your message...</div>
+                  <div class="wf-btn-sm" style="height:24px;">Send</div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 10,
+        title: "Route Optimizer",
+        category: "feature",
+        catLabel: "Feature",
+        color: "#fbbf24",
+        desc: "Interactive map with start/end inputs, POI markers (hotels, restaurants, fuel), and traffic layers.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div style="margin-left:auto;font-size:0.5rem;font-weight:600;color:#334155;">Route Optimizer</div></div>
+            <div style="display:flex;height:calc(100% - 36px);">
+              <div style="width:160px;background:#fff;border-right:1.5px solid #e2e8f0;padding:8px;">
+                <div style="font-size:0.5rem;font-weight:700;color:#334155;margin-bottom:6px;">Plan Route</div>
+                <div class="wf-input" style="font-size:0.4rem;border-left:3px solid #22c55e;">📍 Kathmandu</div>
+                <div class="wf-input" style="font-size:0.4rem;border-left:3px solid #ef4444;">📍 Pokhara</div>
+                <div class="wf-btn-sm" style="width:100%;text-align:center;padding:5px;margin-bottom:8px;">Optimize Route</div>
+                <div class="wf-divider"></div>
+                <div style="font-size:0.45rem;font-weight:600;color:#334155;margin:4px 0;">POI Filters</div>
+                <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                  <div class="wf-tag" style="font-size:0.35rem;background:#dbeafe;">🏨 Hotels</div>
+                  <div class="wf-tag" style="font-size:0.35rem;background:#fef3c7;">🍽️ Food</div>
+                  <div class="wf-tag" style="font-size:0.35rem;background:#dcfce7;">⛽ Fuel</div>
+                  <div class="wf-tag" style="font-size:0.35rem;background:#fce7f3;">⚡ EV</div>
+                </div>
+                <div class="wf-divider"></div>
+                <div style="font-size:0.45rem;font-weight:600;color:#334155;margin:4px 0;">Route Info</div>
+                <div style="font-size:0.4rem;color:#64748b;">Distance: 206 km</div>
+                <div style="font-size:0.4rem;color:#64748b;">ETA: 6h 30m</div>
+              </div>
+              <div class="wf-map" style="flex:1;">
+                <div class="wf-map-pin" style="top:30%;left:35%;"></div>
+                <div class="wf-map-pin" style="top:55%;left:65%;background:#3b82f6;"></div>
+                <div class="wf-map-route" style="top:25%;left:30%;width:120px;height:60px;border-radius:0;border:none;border-top:2px dashed #3b82f6;border-right:2px dashed #3b82f6;"></div>
+                <div style="position:absolute;bottom:8px;right:8px;background:white;padding:4px 8px;border-radius:6px;font-size:0.4rem;color:#334155;z-index:2;border:1px solid #e2e8f0;">
+                  🗺️ Map Controls
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 11,
+        title: "Trips Page",
+        category: "core",
+        catLabel: "Core",
+        color: "#34d399",
+        desc: "Trip list/grid view with filters, status pills, date range picker, and trip detail cards.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div><div class="wf-avatar-sm"></div></div>
+            <div style="padding:10px 14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div class="wf-heading">My Trips</div>
+                <div class="wf-btn-sm">+ Create Trip</div>
+              </div>
+              <div style="display:flex;gap:4px;margin-bottom:8px;">
+                <div class="wf-tab active">All</div>
+                <div class="wf-tab">Upcoming</div>
+                <div class="wf-tab">Completed</div>
+                <div class="wf-tab">Drafts</div>
+              </div>
+              <div class="wf-input" style="margin-bottom:8px;"><div class="wf-input-icon"></div>Search trips...</div>
+              <div class="wf-card-inner" style="display:flex;gap:8px;">
+                <div class="wf-img-placeholder" style="width:60px;height:55px;font-size:0.5rem;">🏔</div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;"><div style="font-size:0.55rem;font-weight:600;color:#334155;">Everest Base Camp Trek</div><div class="wf-badge">Upcoming</div></div>
+                  <div style="font-size:0.4rem;color:#94a3b8;margin:2px 0;">📅 Mar 15 – Mar 28, 2026</div>
+                  <div class="wf-progress" style="width:100%;"><div class="wf-progress-bar" style="width:65%;"></div></div>
+                  <div style="font-size:0.35rem;color:#94a3b8;margin-top:2px;">65% planned</div>
+                </div>
+              </div>
+              <div class="wf-card-inner" style="display:flex;gap:8px;">
+                <div class="wf-img-placeholder" style="width:60px;height:55px;font-size:0.5rem;">🌊</div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;"><div style="font-size:0.55rem;font-weight:600;color:#334155;">Pokhara Lakeside</div><div class="wf-badge" style="background:rgba(59,130,246,0.1);color:#3b82f6;">Completed</div></div>
+                  <div style="font-size:0.4rem;color:#94a3b8;margin:2px 0;">📅 Feb 1 – Feb 5, 2026</div>
+                  <div class="wf-progress" style="width:100%;"><div class="wf-progress-bar" style="width:100%;"></div></div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 12,
+        title: "Saved Items",
+        category: "core",
+        catLabel: "Core",
+        color: "#34d399",
+        desc: "Bookmarked destinations, places search with filters, famous places of Nepal discovery section.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div></div><div class="wf-avatar-sm"></div></div>
+            <div style="padding:10px 14px;">
+              <div class="wf-heading">Saved Items</div>
+              <div class="wf-input" style="margin-bottom:6px;"><div class="wf-input-icon"></div>Search saved places...</div>
+              <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;">
+                <div class="wf-tab active">All</div>
+                <div class="wf-tab">Mountains</div>
+                <div class="wf-tab">Temples</div>
+                <div class="wf-tab">Lakes</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <div class="wf-card-inner" style="padding:0;overflow:hidden;">
+                  <div class="wf-img-placeholder" style="height:45px;border-radius:6px 6px 0 0;font-size:0.4rem;">🏔 Everest</div>
+                  <div style="padding:4px 6px;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">Mt. Everest</div><div class="wf-stars">★★★★★</div></div>
+                </div>
+                <div class="wf-card-inner" style="padding:0;overflow:hidden;">
+                  <div class="wf-img-placeholder" style="height:45px;border-radius:6px 6px 0 0;font-size:0.4rem;">🛕 Pashupatinath</div>
+                  <div style="padding:4px 6px;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">Pashupatinath</div><div class="wf-stars">★★★★☆</div></div>
+                </div>
+                <div class="wf-card-inner" style="padding:0;overflow:hidden;">
+                  <div class="wf-img-placeholder" style="height:45px;border-radius:6px 6px 0 0;font-size:0.4rem;">🌊 Phewa</div>
+                  <div style="padding:4px 6px;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">Phewa Lake</div><div class="wf-stars">★★★★★</div></div>
+                </div>
+                <div class="wf-card-inner" style="padding:0;overflow:hidden;">
+                  <div class="wf-img-placeholder" style="height:45px;border-radius:6px 6px 0 0;font-size:0.4rem;">🌿 Chitwan</div>
+                  <div style="padding:4px 6px;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">Chitwan Park</div><div class="wf-stars">★★★★☆</div></div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 13,
+        title: "Group Plan Page",
+        category: "feature",
+        catLabel: "Feature",
+        color: "#fbbf24",
+        desc: "Collaborative trip planning with member list, voting polls, shared itinerary, and group chat.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div style="margin-left:auto;font-size:0.5rem;font-weight:600;color:#334155;">Group Planning</div></div>
+            <div style="display:flex;height:calc(100% - 36px);">
+              <div style="flex:1;padding:8px;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <div class="wf-heading" style="font-size:0.6rem;">Nepal Adventure 2026</div>
+                  <div class="wf-badge">5 members</div>
+                </div>
+                <div style="display:flex;gap:-4px;margin-bottom:8px;">
+                  <div class="wf-avatar-sm" style="border:2px solid white;margin-left:-4px;"></div>
+                  <div class="wf-avatar-sm" style="border:2px solid white;margin-left:-4px;background:linear-gradient(135deg,#f472b6,#ec4899);"></div>
+                  <div class="wf-avatar-sm" style="border:2px solid white;margin-left:-4px;background:linear-gradient(135deg,#fbbf24,#f59e0b);"></div>
+                  <div class="wf-avatar-sm" style="border:2px solid white;margin-left:-4px;background:linear-gradient(135deg,#34d399,#059669);"></div>
+                  <div style="width:20px;height:20px;border-radius:50%;background:#f1f5f9;border:2px solid white;margin-left:-4px;display:flex;align-items:center;justify-content:center;font-size:0.35rem;color:#64748b;">+1</div>
+                </div>
+                <div class="wf-heading" style="font-size:0.5rem;">🗳️ Active Poll</div>
+                <div class="wf-card-inner">
+                  <div style="font-size:0.45rem;font-weight:600;color:#334155;margin-bottom:4px;">Where should we stay in Pokhara?</div>
+                  <div style="margin-bottom:3px;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.4rem;color:#64748b;"><span>Hotel Lakeside</span><span>3 votes</span></div>
+                    <div class="wf-progress"><div class="wf-progress-bar" style="width:60%;"></div></div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.4rem;color:#64748b;"><span>Airbnb Villa</span><span>2 votes</span></div>
+                    <div class="wf-progress"><div class="wf-progress-bar" style="width:40%;background:linear-gradient(90deg,#fbbf24,#f59e0b);"></div></div>
+                  </div>
+                </div>
+                <div class="wf-heading" style="font-size:0.5rem;margin-top:4px;">📋 Shared Itinerary</div>
+                <div class="wf-card-inner" style="font-size:0.4rem;color:#334155;display:flex;align-items:center;gap:4px;">
+                  <div style="width:4px;height:20px;background:#3b82f6;border-radius:2px;"></div>
+                  <div><strong>Day 1:</strong> Kathmandu → Pokhara<br/><span style="color:#94a3b8;">8:00 AM departure</span></div>
+                </div>
+              </div>
+              <div style="width:140px;background:#fff;border-left:1.5px solid #e2e8f0;padding:8px;display:flex;flex-direction:column;">
+                <div style="font-size:0.5rem;font-weight:700;color:#334155;margin-bottom:6px;">💬 Group Chat</div>
+                <div style="flex:1;overflow:hidden;">
+                  <div class="wf-chat-bubble" style="font-size:0.35rem;">Let's vote on hotels!</div>
+                  <div class="wf-chat-bubble sent" style="font-size:0.35rem;">I prefer Lakeside</div>
+                  <div class="wf-chat-bubble" style="font-size:0.35rem;">Same here! 🙌</div>
+                </div>
+                <div class="wf-input" style="font-size:0.35rem;margin:0;">Message...</div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 14,
+        title: "Translator Page",
+        category: "feature",
+        catLabel: "Feature",
+        color: "#fbbf24",
+        desc: "Real-time language translator with language selector, speech input, and phrasebook.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div style="margin-left:auto;font-size:0.5rem;font-weight:600;color:#334155;">🌐 Translator</div></div>
+            <div style="padding:14px;">
+              <div class="wf-heading" style="text-align:center;">Language Translator</div>
+              <div class="wf-subheading" style="text-align:center;margin-bottom:12px;">Translate between English & Nepali</div>
+              <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <div class="wf-tag" style="background:#dbeafe;color:#3b82f6;">🇬🇧 English</div>
+                  </div>
+                  <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;height:80px;padding:6px;font-size:0.45rem;color:#334155;">Hello, how are you? I would like to visit the temple.</div>
+                </div>
+                <div style="display:flex;align-items:center;">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--wire-accent);display:flex;align-items:center;justify-content:center;color:white;font-size:0.5rem;">⇄</div>
+                </div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <div class="wf-tag" style="background:#fef3c7;color:#d97706;">🇳🇵 Nepali</div>
+                  </div>
+                  <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;height:80px;padding:6px;font-size:0.45rem;color:#334155;">नमस्ते, तपाईंलाई कस्तो छ? म मन्दिर जान चाहन्छु।</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">
+                <div class="wf-btn-sm" style="font-size:0.4rem;">🎤 Speak</div>
+                <div class="wf-btn-outline" style="font-size:0.4rem;">📋 Copy</div>
+                <div class="wf-btn-outline" style="font-size:0.4rem;">🔊 Listen</div>
+              </div>
+              <div class="wf-heading" style="font-size:0.55rem;">📖 Common Phrases</div>
+              <div class="wf-card-inner" style="display:flex;justify-content:space-between;font-size:0.4rem;color:#334155;"><span>Thank you</span><span style="color:#94a3b8;">धन्यवाद</span></div>
+              <div class="wf-card-inner" style="display:flex;justify-content:space-between;font-size:0.4rem;color:#334155;"><span>How much?</span><span style="color:#94a3b8;">कति हो?</span></div>
+            </div>`;
+        }
+      },
+      {
+        id: 15,
+        title: "QR Guide Page",
+        category: "feature",
+        catLabel: "Feature",
+        color: "#fbbf24",
+        desc: "QR code scanner for location-based guides with audio narration and historical info cards.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div style="margin-left:auto;font-size:0.5rem;font-weight:600;color:#334155;">📱 QR Guide</div></div>
+            <div style="padding:14px;text-align:center;">
+              <div class="wf-heading" style="font-size:0.75rem;">Scan & Explore</div>
+              <div class="wf-subheading" style="margin-bottom:12px;">Point your camera at any QR code at heritage sites</div>
+              <div style="display:flex;gap:12px;justify-content:center;align-items:start;">
+                <div style="flex:0 0 auto;">
+                  <div style="width:90px;height:90px;border:3px dashed #3b82f6;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#f8fafc;margin-bottom:6px;">
+                    <div class="wf-qr"></div>
+                  </div>
+                  <div class="wf-btn-sm" style="font-size:0.4rem;">📷 Scan QR Code</div>
+                </div>
+                <div style="flex:1;text-align:left;">
+                  <div class="wf-card-inner">
+                    <div style="font-size:0.5rem;font-weight:700;color:#334155;">🛕 Swayambhunath</div>
+                    <div style="font-size:0.38rem;color:#94a3b8;margin:2px 0;">UNESCO World Heritage Site</div>
+                    <div class="wf-line wf-line-medium"></div>
+                    <div class="wf-line wf-line-short"></div>
+                    <div class="wf-line"></div>
+                    <div style="display:flex;gap:4px;margin-top:4px;">
+                      <div class="wf-btn-sm" style="font-size:0.35rem;">🔊 Audio Guide</div>
+                      <div class="wf-btn-outline" style="font-size:0.35rem;">📖 Full History</div>
+                    </div>
+                  </div>
+                  <div class="wf-card-inner" style="display:flex;gap:6px;align-items:center;">
+                    <div style="font-size:1rem;">🎧</div>
+                    <div style="flex:1;">
+                      <div class="wf-progress"><div class="wf-progress-bar" style="width:40%;"></div></div>
+                      <div style="font-size:0.35rem;color:#94a3b8;margin-top:2px;">2:30 / 6:15</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 16,
+        title: "Notifications Page",
+        category: "core",
+        catLabel: "Core",
+        color: "#34d399",
+        desc: "Notification center with categorized alerts, read/unread states, and action buttons.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div></div><div class="wf-avatar-sm"></div></div>
+            <div style="padding:10px 14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div class="wf-heading">Notifications</div>
+                <div style="font-size:0.4rem;color:#3b82f6;cursor:pointer;">Mark all read</div>
+              </div>
+              <div style="display:flex;gap:4px;margin-bottom:8px;">
+                <div class="wf-tab active">All</div>
+                <div class="wf-tab">Trips</div>
+                <div class="wf-tab">Groups</div>
+                <div class="wf-tab">System</div>
+              </div>
+              <div class="wf-card-inner" style="display:flex;gap:8px;border-left:3px solid #3b82f6;">
+                <div class="wf-icon-box">🗺️</div>
+                <div style="flex:1;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">Trip reminder: Everest Base Camp</div><div style="font-size:0.38rem;color:#94a3b8;">Your trip starts in 3 days! Check your packing list.</div><div style="font-size:0.35rem;color:#94a3b8;margin-top:2px;">2 min ago</div></div>
+                <div style="width:6px;height:6px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:4px;"></div>
+              </div>
+              <div class="wf-card-inner" style="display:flex;gap:8px;border-left:3px solid #fbbf24;">
+                <div class="wf-icon-box" style="background:rgba(251,191,36,0.1);">👥</div>
+                <div style="flex:1;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">New group poll created</div><div style="font-size:0.38rem;color:#94a3b8;">Vote on accommodation for Pokhara trip</div><div style="font-size:0.35rem;color:#94a3b8;margin-top:2px;">1 hour ago</div></div>
+              </div>
+              <div class="wf-card-inner" style="display:flex;gap:8px;border-left:3px solid #34d399;opacity:0.7;">
+                <div class="wf-icon-box" style="background:rgba(52,211,153,0.1);">✅</div>
+                <div style="flex:1;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">Booking confirmed</div><div style="font-size:0.38rem;color:#94a3b8;">Your hotel in Nagarkot has been confirmed</div><div style="font-size:0.35rem;color:#94a3b8;margin-top:2px;">Yesterday</div></div>
+              </div>
+              <div class="wf-card-inner" style="display:flex;gap:8px;opacity:0.6;">
+                <div class="wf-icon-box" style="background:rgba(244,114,182,0.1);">🤖</div>
+                <div style="flex:1;"><div style="font-size:0.45rem;font-weight:600;color:#334155;">AI suggestion ready</div><div style="font-size:0.38rem;color:#94a3b8;">New personalized itinerary available</div><div style="font-size:0.35rem;color:#94a3b8;margin-top:2px;">2 days ago</div></div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 17,
+        title: "About Page",
+        category: "info",
+        catLabel: "Info",
+        color: "#f472b6",
+        desc: "Company story, team section, mission statement, and key statistics about ExploreMate.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div><div class="wf-btn-sm">Sign Up</div></div>
+            <div style="padding:14px;">
+              <div class="wf-heading" style="font-size:0.8rem;text-align:center;">About ExploreMate</div>
+              <div class="wf-subheading" style="text-align:center;margin-bottom:8px;">Making Nepal's beauty accessible to everyone</div>
+              <div class="wf-img-placeholder" style="height:50px;margin-bottom:10px;">🏔️ Our Story</div>
+              <div class="wf-line"></div><div class="wf-line wf-line-medium"></div><div class="wf-line wf-line-short" style="margin-bottom:10px;"></div>
+              <div class="wf-heading" style="font-size:0.55rem;">Our Team</div>
+              <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <div style="text-align:center;"><div class="wf-avatar" style="margin:0 auto 4px;"></div><div style="font-size:0.4rem;font-weight:600;color:#334155;">CEO</div></div>
+                <div style="text-align:center;"><div class="wf-avatar" style="margin:0 auto 4px;background:linear-gradient(135deg,#f472b6,#ec4899);"></div><div style="font-size:0.4rem;font-weight:600;color:#334155;">CTO</div></div>
+                <div style="text-align:center;"><div class="wf-avatar" style="margin:0 auto 4px;background:linear-gradient(135deg,#34d399,#059669);"></div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Designer</div></div>
+                <div style="text-align:center;"><div class="wf-avatar" style="margin:0 auto 4px;background:linear-gradient(135deg,#fbbf24,#f59e0b);"></div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Dev</div></div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <div class="wf-card-inner" style="flex:1;text-align:center;"><div class="wf-stat-num" style="font-size:0.65rem;">🚀</div><div class="wf-stat-label">Founded 2024</div></div>
+                <div class="wf-card-inner" style="flex:1;text-align:center;"><div class="wf-stat-num" style="font-size:0.65rem;">🌍</div><div class="wf-stat-label">50+ Destinations</div></div>
+                <div class="wf-card-inner" style="flex:1;text-align:center;"><div class="wf-stat-num" style="font-size:0.65rem;">❤️</div><div class="wf-stat-label">10K+ Users</div></div>
+              </div>
+            </div>
+            <div class="wf-footer"><div class="wf-footer-link"></div><div class="wf-footer-link"></div><div class="wf-footer-link"></div></div>`;
+        }
+      },
+      {
+        id: 18,
+        title: "Features Page",
+        category: "info",
+        catLabel: "Info",
+        color: "#f472b6",
+        desc: "Detailed feature showcase with icons, descriptions, and interactive feature cards.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div><div class="wf-btn-sm">Try Free</div></div>
+            <div style="padding:14px;">
+              <div class="wf-heading" style="font-size:0.8rem;text-align:center;">Powerful Features</div>
+              <div class="wf-subheading" style="text-align:center;margin-bottom:12px;">Everything you need for the perfect trip</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                <div class="wf-card-inner" style="text-align:center;padding:10px 6px;">
+                  <div style="font-size:1rem;margin-bottom:4px;">🤖</div>
+                  <div style="font-size:0.45rem;font-weight:700;color:#334155;margin-bottom:2px;">AI Suggestions</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;">Smart recommendations</div>
+                </div>
+                <div class="wf-card-inner" style="text-align:center;padding:10px 6px;">
+                  <div style="font-size:1rem;margin-bottom:4px;">🗺️</div>
+                  <div style="font-size:0.45rem;font-weight:700;color:#334155;margin-bottom:2px;">Route Optimizer</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;">Best paths & POIs</div>
+                </div>
+                <div class="wf-card-inner" style="text-align:center;padding:10px 6px;">
+                  <div style="font-size:1rem;margin-bottom:4px;">👥</div>
+                  <div style="font-size:0.45rem;font-weight:700;color:#334155;margin-bottom:2px;">Group Plans</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;">Travel together</div>
+                </div>
+                <div class="wf-card-inner" style="text-align:center;padding:10px 6px;">
+                  <div style="font-size:1rem;margin-bottom:4px;">🌐</div>
+                  <div style="font-size:0.45rem;font-weight:700;color:#334155;margin-bottom:2px;">Translator</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;">Language barrier free</div>
+                </div>
+                <div class="wf-card-inner" style="text-align:center;padding:10px 6px;">
+                  <div style="font-size:1rem;margin-bottom:4px;">📱</div>
+                  <div style="font-size:0.45rem;font-weight:700;color:#334155;margin-bottom:2px;">QR Guide</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;">Scan & discover</div>
+                </div>
+                <div class="wf-card-inner" style="text-align:center;padding:10px 6px;">
+                  <div style="font-size:1rem;margin-bottom:4px;">💾</div>
+                  <div style="font-size:0.45rem;font-weight:700;color:#334155;margin-bottom:2px;">Save Places</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;">Bookmark favorites</div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 19,
+        title: "Blog Page",
+        category: "info",
+        catLabel: "Info",
+        color: "#f472b6",
+        desc: "Travel blog with article cards, categories, featured posts, and reading time estimates.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div><div class="wf-btn-sm">Write</div></div>
+            <div style="padding:10px 14px;">
+              <div class="wf-heading">Travel Blog</div>
+              <div style="display:flex;gap:4px;margin-bottom:8px;">
+                <div class="wf-tab active">All</div>
+                <div class="wf-tab">Trekking</div>
+                <div class="wf-tab">Culture</div>
+                <div class="wf-tab">Food</div>
+              </div>
+              <div class="wf-card-inner" style="padding:0;overflow:hidden;margin-bottom:6px;">
+                <div class="wf-img-placeholder" style="height:50px;border-radius:6px 6px 0 0;">🏔️ Featured: Annapurna Circuit Guide</div>
+                <div style="padding:6px 8px;">
+                  <div style="font-size:0.5rem;font-weight:700;color:#334155;">Complete Guide to the Annapurna Circuit</div>
+                  <div style="font-size:0.38rem;color:#94a3b8;margin:2px 0;">Everything you need to know for this iconic trek</div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:3px;"><div class="wf-avatar-sm" style="width:14px;height:14px;"></div><span style="font-size:0.35rem;color:#64748b;">Rasho</span></div>
+                    <span style="font-size:0.35rem;color:#94a3b8;">📖 8 min read</span>
+                    <span style="font-size:0.35rem;color:#94a3b8;">Apr 15, 2026</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <div class="wf-card-inner" style="padding:0;overflow:hidden;">
+                  <div class="wf-img-placeholder" style="height:35px;border-radius:6px 6px 0 0;font-size:0.35rem;">🍜 Food</div>
+                  <div style="padding:4px 6px;"><div style="font-size:0.4rem;font-weight:600;color:#334155;">Nepali Food Guide</div><div style="font-size:0.3rem;color:#94a3b8;">5 min read</div></div>
+                </div>
+                <div class="wf-card-inner" style="padding:0;overflow:hidden;">
+                  <div class="wf-img-placeholder" style="height:35px;border-radius:6px 6px 0 0;font-size:0.35rem;">🛕 Culture</div>
+                  <div style="padding:4px 6px;"><div style="font-size:0.4rem;font-weight:600;color:#334155;">Temple Etiquette</div><div style="font-size:0.3rem;color:#94a3b8;">3 min read</div></div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 20,
+        title: "News Page",
+        category: "info",
+        catLabel: "Info",
+        color: "#f472b6",
+        desc: "Latest travel news, Nepal tourism updates, weather alerts, and trending destinations.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div></div>
+            <div style="padding:10px 14px;">
+              <div class="wf-heading">📰 Travel News</div>
+              <div class="wf-subheading" style="margin-bottom:8px;">Latest updates from Nepal's tourism world</div>
+              <div class="wf-card-inner" style="display:flex;gap:6px;">
+                <div class="wf-img-placeholder" style="width:50px;height:50px;font-size:0.4rem;">🚁</div>
+                <div style="flex:1;"><div class="wf-badge" style="background:rgba(239,68,68,0.1);color:#ef4444;margin-bottom:2px;">Breaking</div><div style="font-size:0.5rem;font-weight:600;color:#334155;">New helicopter routes to Everest region</div><div style="font-size:0.38rem;color:#94a3b8;">Tourism Ministry announces 3 new scenic routes...</div><div style="font-size:0.3rem;color:#94a3b8;margin-top:3px;">2 hours ago</div></div>
+              </div>
+              <div class="wf-card-inner" style="display:flex;gap:6px;">
+                <div class="wf-img-placeholder" style="width:50px;height:50px;font-size:0.4rem;">🌦️</div>
+                <div style="flex:1;"><div class="wf-badge" style="margin-bottom:2px;">Weather</div><div style="font-size:0.5rem;font-weight:600;color:#334155;">Spring trekking season forecast</div><div style="font-size:0.38rem;color:#94a3b8;">Perfect weather expected through April...</div><div style="font-size:0.3rem;color:#94a3b8;margin-top:3px;">Yesterday</div></div>
+              </div>
+              <div class="wf-card-inner" style="display:flex;gap:6px;">
+                <div class="wf-img-placeholder" style="width:50px;height:50px;font-size:0.4rem;">🎉</div>
+                <div style="flex:1;"><div class="wf-badge" style="background:rgba(168,85,247,0.1);color:#8b5cf6;margin-bottom:2px;">Event</div><div style="font-size:0.5rem;font-weight:600;color:#334155;">Holi festival celebrations across Nepal</div><div style="font-size:0.38rem;color:#94a3b8;">Join the colorful festivities...</div><div style="font-size:0.3rem;color:#94a3b8;margin-top:3px;">3 days ago</div></div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 21,
+        title: "Pricing Page",
+        category: "info",
+        catLabel: "Info",
+        color: "#f472b6",
+        desc: "Subscription tiers with feature comparison, free/pro/enterprise plans and billing toggle.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div></div>
+            <div style="padding:12px 14px;">
+              <div class="wf-heading" style="font-size:0.8rem;text-align:center;">Choose Your Plan</div>
+              <div style="display:flex;justify-content:center;gap:4px;margin:6px 0 10px;">
+                <div class="wf-tab active">Monthly</div>
+                <div class="wf-tab">Yearly (Save 20%)</div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <div class="wf-card-inner" style="flex:1;text-align:center;padding:10px 6px;">
+                  <div style="font-size:0.5rem;font-weight:700;color:#334155;">Free</div>
+                  <div style="font-size:0.9rem;font-weight:800;color:#334155;margin:4px 0;">$0</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;margin-bottom:6px;">per month</div>
+                  <div style="font-size:0.35rem;color:#64748b;text-align:left;">✓ 5 saved places<br/>✓ Basic AI tips<br/>✓ QR Guide<br/>✗ Route optimizer<br/>✗ Group plans</div>
+                  <div class="wf-btn-outline" style="margin-top:6px;width:100%;text-align:center;">Current Plan</div>
+                </div>
+                <div class="wf-card-inner" style="flex:1;text-align:center;padding:10px 6px;border-color:#3b82f6;position:relative;">
+                  <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);background:#3b82f6;color:white;font-size:0.3rem;padding:2px 8px;border-radius:4px;font-weight:700;">POPULAR</div>
+                  <div style="font-size:0.5rem;font-weight:700;color:#3b82f6;">Pro</div>
+                  <div style="font-size:0.9rem;font-weight:800;color:#334155;margin:4px 0;">$9</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;margin-bottom:6px;">per month</div>
+                  <div style="font-size:0.35rem;color:#64748b;text-align:left;">✓ Unlimited saves<br/>✓ Full AI planner<br/>✓ Route optimizer<br/>✓ Group plans<br/>✓ Translator</div>
+                  <div class="wf-btn-sm" style="margin-top:6px;width:100%;text-align:center;">Upgrade</div>
+                </div>
+                <div class="wf-card-inner" style="flex:1;text-align:center;padding:10px 6px;">
+                  <div style="font-size:0.5rem;font-weight:700;color:#334155;">Enterprise</div>
+                  <div style="font-size:0.9rem;font-weight:800;color:#334155;margin:4px 0;">$29</div>
+                  <div style="font-size:0.35rem;color:#94a3b8;margin-bottom:6px;">per month</div>
+                  <div style="font-size:0.35rem;color:#64748b;text-align:left;">✓ Everything in Pro<br/>✓ API access<br/>✓ Priority support<br/>✓ Custom branding<br/>✓ Analytics</div>
+                  <div class="wf-btn-outline" style="margin-top:6px;width:100%;text-align:center;">Contact</div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 22,
+        title: "Admin Dashboard",
+        category: "admin",
+        catLabel: "Admin",
+        color: "#f87171",
+        desc: "System admin panel with user management, content moderation, real-time stats, and role controls.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar" style="background:#1e293b;"><div class="wf-logo" style="background:#ef4444;"></div><div style="font-size:0.5rem;font-weight:700;color:white;margin-left:6px;">Admin Console</div><div style="margin-left:auto;display:flex;gap:8px;align-items:center;"><div style="font-size:0.4rem;color:#94a3b8;">admin@exploremate</div><div class="wf-avatar-sm" style="background:linear-gradient(135deg,#ef4444,#dc2626);"></div></div></div>
+            <div style="display:flex;height:calc(100% - 36px);">
+              <div style="width:55px;background:#1e293b;border-right:1px solid #334155;padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:8px;">
+                <div class="wf-sidebar-icon" style="background:#334155;"></div>
+                <div class="wf-sidebar-icon" style="background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);"></div>
+                <div class="wf-sidebar-icon" style="background:#334155;"></div>
+                <div class="wf-sidebar-icon" style="background:#334155;"></div>
+              </div>
+              <div style="flex:1;padding:8px;overflow:hidden;">
+                <div style="display:flex;gap:6px;margin-bottom:8px;">
+                  <div class="wf-card-inner" style="flex:1;text-align:center;border-color:#dbeafe;"><div style="font-size:0.7rem;font-weight:800;color:#3b82f6;">1,247</div><div class="wf-stat-label">Total Users</div></div>
+                  <div class="wf-card-inner" style="flex:1;text-align:center;border-color:#dcfce7;"><div style="font-size:0.7rem;font-weight:800;color:#059669;">892</div><div class="wf-stat-label">Active</div></div>
+                  <div class="wf-card-inner" style="flex:1;text-align:center;border-color:#fef3c7;"><div style="font-size:0.7rem;font-weight:800;color:#d97706;">156</div><div class="wf-stat-label">Trips Today</div></div>
+                  <div class="wf-card-inner" style="flex:1;text-align:center;border-color:#fce7f3;"><div style="font-size:0.7rem;font-weight:800;color:#db2777;">45</div><div class="wf-stat-label">Reports</div></div>
+                </div>
+                <div class="wf-heading" style="font-size:0.55rem;">User Management</div>
+                <div class="wf-table-row" style="font-weight:700;background:#f8fafc;padding:4px 6px;border-radius:4px;">
+                  <span style="width:60px;">Name</span><span style="width:80px;">Email</span><span style="width:40px;">Role</span><span style="width:40px;">Status</span><span>Actions</span>
+                </div>
+                <div class="wf-table-row" style="padding:4px 6px;">
+                  <span style="width:60px;display:flex;align-items:center;gap:3px;"><div class="wf-avatar-sm" style="width:14px;height:14px;"></div>User A</span>
+                  <span style="width:80px;font-size:0.35rem;">a@test.com</span>
+                  <span style="width:40px;"><div class="wf-badge">USER</div></span>
+                  <span style="width:40px;"><div class="wf-toggle" style="width:22px;height:12px;"></div></span>
+                  <span style="font-size:0.35rem;color:#3b82f6;">Edit | Delete</span>
+                </div>
+                <div class="wf-table-row" style="padding:4px 6px;">
+                  <span style="width:60px;display:flex;align-items:center;gap:3px;"><div class="wf-avatar-sm" style="width:14px;height:14px;background:linear-gradient(135deg,#ef4444,#dc2626);"></div>Admin</span>
+                  <span style="width:80px;font-size:0.35rem;">admin@em.com</span>
+                  <span style="width:40px;"><div class="wf-badge" style="background:rgba(239,68,68,0.1);color:#ef4444;">ADMIN</div></span>
+                  <span style="width:40px;"><div class="wf-toggle" style="width:22px;height:12px;"></div></span>
+                  <span style="font-size:0.35rem;color:#3b82f6;">Edit</span>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 23,
+        title: "Gallery Page",
+        category: "social",
+        catLabel: "Social",
+        color: "#fb923c",
+        desc: "Photo gallery with masonry layout, lightbox previews, location tags, and user contributions.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div><div class="wf-btn-sm">📷 Upload</div></div>
+            <div style="padding:10px 14px;">
+              <div class="wf-heading">Photo Gallery</div>
+              <div style="display:flex;gap:4px;margin-bottom:8px;">
+                <div class="wf-tab active">All</div>
+                <div class="wf-tab">Mountains</div>
+                <div class="wf-tab">Cities</div>
+                <div class="wf-tab">Wildlife</div>
+                <div class="wf-tab">Culture</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+                <div class="wf-img-placeholder" style="height:60px;font-size:0.35rem;">🏔️ Everest<br/>Sunrise</div>
+                <div class="wf-img-placeholder" style="height:80px;grid-row:span 2;font-size:0.35rem;">🛕<br/>Boudhanath<br/>Stupa</div>
+                <div class="wf-img-placeholder" style="height:60px;font-size:0.35rem;">🌅 Pokhara<br/>Sunset</div>
+                <div class="wf-img-placeholder" style="height:60px;font-size:0.35rem;">🦏 Chitwan<br/>Rhino</div>
+                <div class="wf-img-placeholder" style="height:60px;font-size:0.35rem;">🌿<br/>Jungle</div>
+                <div class="wf-img-placeholder" style="height:50px;font-size:0.35rem;">🏞️ Annapurna</div>
+                <div class="wf-img-placeholder" style="height:50px;font-size:0.35rem;">🎭 Festival</div>
+                <div class="wf-img-placeholder" style="height:50px;font-size:0.35rem;">☕ Café</div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 24,
+        title: "Testimonials Page",
+        category: "social",
+        catLabel: "Social",
+        color: "#fb923c",
+        desc: "User reviews and testimonials with ratings, traveler photos, and verified badges.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div></div>
+            <div style="padding:12px 14px;">
+              <div class="wf-heading" style="font-size:0.75rem;text-align:center;">What Travelers Say</div>
+              <div class="wf-subheading" style="text-align:center;margin-bottom:10px;">Real stories from real explorers</div>
+              <div style="display:flex;gap:6px;">
+                <div class="wf-card-inner" style="flex:1;padding:10px;">
+                  <div class="wf-stars" style="margin-bottom:4px;">★★★★★</div>
+                  <div style="font-size:0.4rem;color:#334155;font-style:italic;margin-bottom:6px;">"ExploreMate made my Nepal trip absolutely incredible. The AI suggestions were spot on!"</div>
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <div class="wf-avatar-sm"></div>
+                    <div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Sarah K.</div><div style="font-size:0.3rem;color:#94a3b8;">🇺🇸 USA</div></div>
+                    <div class="wf-badge ml-auto" style="font-size:0.3rem;">✓ Verified</div>
+                  </div>
+                </div>
+                <div class="wf-card-inner" style="flex:1;padding:10px;">
+                  <div class="wf-stars" style="margin-bottom:4px;">★★★★★</div>
+                  <div style="font-size:0.4rem;color:#334155;font-style:italic;margin-bottom:6px;">"The group planning feature is amazing. Made coordinating our team trip so easy."</div>
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <div class="wf-avatar-sm" style="background:linear-gradient(135deg,#f472b6,#ec4899);"></div>
+                    <div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Yuki M.</div><div style="font-size:0.3rem;color:#94a3b8;">🇯🇵 Japan</div></div>
+                    <div class="wf-badge ml-auto" style="font-size:0.3rem;">✓ Verified</div>
+                  </div>
+                </div>
+              </div>
+              <div class="wf-card-inner" style="margin-top:6px;padding:10px;">
+                <div class="wf-stars" style="margin-bottom:4px;">★★★★☆</div>
+                <div style="font-size:0.4rem;color:#334155;font-style:italic;margin-bottom:6px;">"Route optimizer saved us so much time driving between destinations. The POI markers for fuel stations were lifesavers!"</div>
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <div class="wf-avatar-sm" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);"></div>
+                  <div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Marco R.</div><div style="font-size:0.3rem;color:#94a3b8;">🇮🇹 Italy</div></div>
+                  <div class="wf-badge ml-auto" style="font-size:0.3rem;">✓ Verified</div>
+                </div>
+              </div>
+            </div>`;
+        }
+      },
+      {
+        id: 25,
+        title: "Contact Page",
+        category: "info",
+        catLabel: "Info",
+        color: "#f472b6",
+        desc: "Contact form with name, email, message fields, office location map, and support channels.",
+        render: (c) => {
+          c.innerHTML = `
+            <div class="wf-topbar"><div class="wf-logo"></div><div class="wf-nav-links"><div class="wf-nav-link"></div><div class="wf-nav-link"></div></div></div>
+            <div style="padding:14px;">
+              <div class="wf-heading" style="font-size:0.75rem;text-align:center;">Get In Touch</div>
+              <div class="wf-subheading" style="text-align:center;margin-bottom:12px;">We'd love to hear from you</div>
+              <div style="display:flex;gap:10px;">
+                <div style="flex:1;">
+                  <div class="wf-input"><div class="wf-input-icon"></div>Your Name</div>
+                  <div class="wf-input"><div class="wf-input-icon"></div>Email Address</div>
+                  <div class="wf-input"><div class="wf-input-icon"></div>Subject</div>
+                  <div style="height:50px;background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:6px;margin-bottom:6px;padding:6px 8px;font-size:0.4rem;color:#94a3b8;">Your message...</div>
+                  <div class="wf-btn-sm" style="width:100%;text-align:center;padding:6px;">Send Message</div>
+                </div>
+                <div style="flex:1;">
+                  <div class="wf-card-inner" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                    <div class="wf-icon-box">📧</div>
+                    <div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Email</div><div style="font-size:0.35rem;color:#94a3b8;">hello@exploremate.com</div></div>
+                  </div>
+                  <div class="wf-card-inner" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                    <div class="wf-icon-box" style="background:rgba(52,211,153,0.1);">📞</div>
+                    <div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Phone</div><div style="font-size:0.35rem;color:#94a3b8;">+977-1-4567890</div></div>
+                  </div>
+                  <div class="wf-card-inner" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                    <div class="wf-icon-box" style="background:rgba(251,191,36,0.1);">📍</div>
+                    <div><div style="font-size:0.4rem;font-weight:600;color:#334155;">Office</div><div style="font-size:0.35rem;color:#94a3b8;">Thamel, Kathmandu</div></div>
+                  </div>
+                  <div class="wf-map" style="height:55px;"><div class="wf-map-pin" style="top:40%;left:50%;"></div></div>
+                </div>
+              </div>
+            </div>`;
+        }
+      }
+    ];
+
+    // ── Category helpers ──
+    const catMap = {
+      public: 'cat-public',
+      auth: 'cat-auth',
+      core: 'cat-core',
+      feature: 'cat-feature',
+      admin: 'cat-admin',
+      info: 'cat-info',
+      social: 'cat-social'
+    };
+
+    // ── Build Navigation ──
+    const navInner = document.getElementById('navInner');
+    wireframes.forEach(wf => {
+      const btn = document.createElement('button');
+      btn.className = 'nav-btn';
+      btn.id = `nav-${wf.id}`;
+      btn.innerHTML = `<span class="nav-num">${wf.id}</span>${wf.title}`;
+      btn.onclick = () => {
+        document.getElementById(`wf-${wf.id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
+      navInner.appendChild(btn);
+    });
+
+    // ── Build Wireframe Grid ──
+    const grid = document.getElementById('wireframeGrid');
+    wireframes.forEach((wf, index) => {
+      const card = document.createElement('div');
+      card.className = 'wf-card';
+      card.id = `wf-${wf.id}`;
+      card.style.animationDelay = `${index * 0.05}s`;
+
+      const header = document.createElement('div');
+      header.className = 'wf-header';
+      header.innerHTML = `
+        <div class="wf-header-left">
+          <div class="wf-number" style="background:${wf.color};">${wf.id}</div>
+          <div class="wf-title">${wf.title}</div>
+        </div>
+        <div class="wf-category ${catMap[wf.category]}">${wf.catLabel}</div>
+      `;
+
+      const canvas = document.createElement('div');
+      canvas.className = 'wf-canvas';
+      wf.render(canvas);
+
+      const desc = document.createElement('div');
+      desc.className = 'wf-desc';
+      desc.innerHTML = `<p>${wf.desc}</p>`;
+
+      card.appendChild(header);
+      card.appendChild(canvas);
+      card.appendChild(desc);
+      grid.appendChild(card);
+    });
+
+    // ── Intersection Observer for nav highlight ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const id = entry.target.id.replace('wf-', '');
+        const navBtn = document.getElementById(`nav-${id}`);
+        if (navBtn) {
+          navBtn.classList.toggle('active', entry.isIntersecting);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('.wf-card').forEach(card => observer.observe(card));
+  </script>
+</body>
+</html>

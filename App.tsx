@@ -161,6 +161,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
+  const [userProfilePicture, setUserProfilePicture] = useState<string>('');
   const isAdmin = userRole?.toUpperCase() === 'ADMIN';
 
   // Check for reset password token in URL on initial load
@@ -192,6 +193,7 @@ export default function App() {
             setIsLoggedIn(true);
             setUserRole(storedSession.user.role);
             setUserName(storedSession.user.name || 'Explorer');
+            setUserProfilePicture(storedSession.user.profilePicture || '');
             // Restore the saved view if user is logged in
             const savedView = getCurrentView();
             if (savedView && savedView !== 'landing') {
@@ -207,6 +209,14 @@ export default function App() {
         setIsLoggedIn(true);
         setUserRole(currentUser.role);
         setUserName(currentUser.name || 'Explorer');
+        // Profile picture will be loaded when profile page fetches full profile
+        
+        // Don't override if user is on a dedicated auth flow page
+        const path = window.location.pathname.replace(/^\/+/g, '');
+        if (path === 'reset-password' || path === 'forgot-password' || window.location.search.includes('token=')) {
+          return;
+        }
+
         // Restore the saved view if user is logged in
         const savedView = getCurrentView();
         if (savedView && savedView !== 'landing') {
@@ -220,7 +230,12 @@ export default function App() {
         setIsLoggedIn(false);
         setUserRole(null);
         setUserName('');
-        setView('landing');
+        setUserProfilePicture('');
+        
+        const path = window.location.pathname.replace(/^\/+/g, '');
+        if (path !== 'reset-password' && path !== 'forgot-password' && !window.location.search.includes('token=')) {
+           setView('landing');
+        }
       }
     };
 
@@ -258,7 +273,9 @@ export default function App() {
         'saved': 'saved',
         'notifications': 'notifications',
         'group-plan': 'group-plan',
-        'ai-suggestion': 'ai-suggestion'
+        'ai-suggestion': 'ai-suggestion',
+        'forgot-password': 'forgot-password',
+        'reset-password': 'reset-password'
       };
 
       if (viewMap[path]) {
@@ -302,6 +319,7 @@ export default function App() {
     setIsLoggedIn(false);
     setUserRole(null);
     setUserName('');
+    setUserProfilePicture('');
     setView('landing');
   };
 
@@ -312,10 +330,10 @@ export default function App() {
       case 'signup': return <SignupPage onSignup={handleSignup} onNavigate={handleNavigate} />;
       case 'forgot-password': return <ForgotPasswordPage onNavigate={handleNavigate} />;
       case 'reset-password': return <ResetPasswordPage onNavigate={handleNavigate} />;
-      case 'dashboard': return <DashboardPage onLogout={handleLogout} onNavigate={handleNavigate} userName={userName} />;
-      case 'saved': return <SavedPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
-      case 'trips': return <TripsPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />;
-      case 'profile': return <ProfilePage onLogout={handleLogout} onNavigate={handleNavigate} onProfileUpdate={(name) => setUserName(name)} />;
+      case 'dashboard': return <DashboardPage onLogout={handleLogout} onNavigate={handleNavigate} userName={userName} userProfilePicture={userProfilePicture} />;
+      case 'saved': return <SavedPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} userProfilePicture={userProfilePicture} />;
+      case 'trips': return <TripsPage onLogout={handleLogout} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} userProfilePicture={userProfilePicture} />;
+      case 'profile': return <ProfilePage onLogout={handleLogout} onNavigate={handleNavigate} onProfileUpdate={(name) => setUserName(name)} onProfilePictureUpdate={(pic) => setUserProfilePicture(pic)} />;
       case 'notifications': return <NotificationsPage onNavigate={handleNavigate} />;
       case 'route-optimizer': return <RouteOptimizerPage onNavigate={handleNavigate} />;
       case 'translator': return <TranslatorPage onNavigate={handleNavigate} />;

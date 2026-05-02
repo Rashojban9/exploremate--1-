@@ -55,6 +55,8 @@ export interface ProfileResponse {
     interests?: string[];
     budget?: number;
     travelStyle?: string;
+    enabled?: boolean;
+    locked?: boolean;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -71,6 +73,8 @@ export interface ProfileUpdatePayload {
     interests?: string[];
     budget?: number;
     travelStyle?: string;
+    enabled?: boolean;
+    locked?: boolean;
 }
 
 // The shape returned by backend's getCurrentUser (wrapped in Response utility)
@@ -141,13 +145,14 @@ export async function updateProfile(payload: ProfileUpdatePayload): Promise<Prof
     const res = await put<any>('/api/auth/profile', payload, true);
     const data = unpack<ProfileResponse>(res);
 
-    // Sync local storage if name or email changed
+    // Sync local storage if name, email, or profile picture changed
     const current = getStoredSession();
-    if (current && (data.name || data.email)) {
+    if (current && (data.name || data.email || payload.profilePicture !== undefined)) {
         saveUser({
             ...current.user,
             name: data.name ?? current.user.name,
             email: data.email ?? current.user.email,
+            profilePicture: payload.profilePicture ?? current.user.profilePicture,
         });
     }
 

@@ -1,0 +1,179 @@
+================================================================================
+                    EXPLOREMATE - NON-FUNCTIONAL REQUIREMENTS DOCUMENT
+                        AI-Powered Travel Companion for Nepal
+================================================================================
+
+Project Name    : ExploreMate - AI-Powered Travel Companion for Nepal
+Document Type   : Non-Functional Requirements Specification
+Section         : 7.8.2.8. Other Non-Functional Requirements
+Prepared By     : [Student Name]
+Date            : [Date]
+
+
+================================================================================
+7.8.2.8.1.  Quality Requirements
+================================================================================
+
+  Req-ID   | Requirement Description                              | Priority
+  ---------|------------------------------------------------------|----------
+  QR-01    | The application should run smoothly in all modern     | Should
+           | browsers (Chrome, Firefox, Safari, Edge).             |
+  ---------|------------------------------------------------------|----------
+  QR-02    | The application must be hosted on a high-performance  | Should
+           | server to ensure uptime and reliability.              |
+  ---------|------------------------------------------------------|----------
+  QR-03    | The application should have a pleasing and intuitive  | Should
+           | UI design following modern design principles.         |
+  ---------|------------------------------------------------------|----------
+  QR-04    | The user could use high-speed internet for optimal    | Could
+           | performance of map and AI features.                   |
+  ---------|------------------------------------------------------|----------
+  QR-05    | The application should provide consistent user        | Should
+           | experience across desktop and mobile devices.         |
+  ---------|------------------------------------------------------|----------
+  QR-06    | The application should handle API failures gracefully | Should
+           | and display user-friendly error messages.             |
+
+
+================================================================================
+7.8.2.8.2.  Security Requirements
+================================================================================
+
+  Req-ID   | Requirement Description                              | Priority
+  ---------|------------------------------------------------------|----------
+  SR-01    | The security of the server should be managed by the  | Should
+           | hosting provider with regular security patches.       |
+  ---------|------------------------------------------------------|----------
+  SR-02    | The application should not contain any third-party    | Should
+           | tracking scripts that affect user experience or       |
+           | compromise user privacy.                              |
+  ---------|------------------------------------------------------|----------
+  SR-03    | The application should use a secure method (BCrypt)   | Should
+           | to hash and store user passwords in the database.     |
+  ---------|------------------------------------------------------|----------
+  SR-04    | Any secured content should be communicated in         | Should
+           | encrypted format using HTTPS/TLS protocols.           |
+  ---------|------------------------------------------------------|----------
+  SR-05    | The application must use JWT (JSON Web Tokens) for    | Should
+           | stateless authentication and session management.      |
+  ---------|------------------------------------------------------|----------
+  SR-06    | The admin panel should be accessible only to users    | Must
+           | with the ADMIN role through role-based access         |
+           | control (RBAC).                                       |
+  ---------|------------------------------------------------------|----------
+  SR-07    | API endpoints should validate and sanitize all user   | Should
+           | inputs to prevent SQL injection and XSS attacks.      |
+  ---------|------------------------------------------------------|----------
+  SR-08    | Sensitive API keys (Mapbox, AI service) should be     | Must
+           | stored securely in environment variables and never    |
+           | exposed to the client-side code.                      |
+
+
+================================================================================
+7.8.2.8.3.  Maintainability Requirements
+================================================================================
+
+  Req-ID   | Requirement Description                              | Priority
+  ---------|------------------------------------------------------|----------
+  MR-01    | The application should continue to receive updates   | Should
+           | in the future for bug fixes and patches.              |
+  ---------|------------------------------------------------------|----------
+  MR-02    | The application could add new features as per user   | Could
+           | requirements and feedback.                            |
+  ---------|------------------------------------------------------|----------
+  MR-03    | The codebase should follow a microservices            | Should
+           | architecture to enable independent deployment and     |
+           | scaling of services.                                  |
+  ---------|------------------------------------------------------|----------
+  MR-04    | The application should use Docker containers for     | Should
+           | consistent development and deployment environments.   |
+  ---------|------------------------------------------------------|----------
+  MR-05    | The code should be well-documented with clear         | Should
+           | comments and follow standard coding conventions.      |
+  ---------|------------------------------------------------------|----------
+  MR-06    | The application could integrate a CI/CD pipeline      | Could
+           | for automated testing and deployment.                 |
+
+
+================================================================================
+7.8.2.8.4.  Performance Requirements
+================================================================================
+
+  Req-ID   | Requirement Description                              | Priority
+  ---------|------------------------------------------------------|----------
+  PR-01    | The application pages should load within 3 seconds   | Should
+           | under normal network conditions.                      |
+  ---------|------------------------------------------------------|----------
+  PR-02    | The AI suggestion service should return responses     | Should
+           | within 10 seconds of the user submitting a query.     |
+  ---------|------------------------------------------------------|----------
+  PR-03    | The route optimizer map should render the route and   | Should
+           | POI markers within 5 seconds of search.               |
+  ---------|------------------------------------------------------|----------
+  PR-04    | The application should support at least 100           | Should
+           | concurrent users without performance degradation.     |
+  ---------|------------------------------------------------------|----------
+  PR-05    | The translation service should return results within  | Should
+           | 5 seconds for standard text inputs.                   |
+
+
+================================================================================
+7.8.2.8.5.  Scalability Requirements
+================================================================================
+
+  Req-ID   | Requirement Description                              | Priority
+  ---------|------------------------------------------------------|----------
+  SC-01    | The backend microservices should be independently     | Should
+           | scalable to handle increased load on specific         |
+           | modules (e.g., AI service, auth service).             |
+  ---------|------------------------------------------------------|----------
+  SC-02    | The database should support horizontal scaling as     | Could
+           | the number of users and trips grows.                  |
+  ---------|------------------------------------------------------|----------
+  SC-03    | The application could use a service discovery         | Could
+           | mechanism (Eureka) for dynamic service registration   |
+           | and load balancing.                                   |
+
+
+================================================================================
+7.8.2.8.6.  Usability Requirements
+================================================================================
+
+  Req-ID   | Requirement Description                              | Priority
+  ---------|------------------------------------------------------|----------
+  UR-01    | The application should provide clear navigation with | Should
+           | an intuitive menu structure accessible from all       |
+           | pages.                                                |
+  ---------|------------------------------------------------------|----------
+  UR-02    | The application should display appropriate loading    | Should
+           | indicators during asynchronous operations (API        |
+           | calls, map rendering, AI processing).                 |
+  ---------|------------------------------------------------------|----------
+  UR-03    | The application should provide meaningful error       | Should
+           | messages and form validation feedback in real-time.   |
+  ---------|------------------------------------------------------|----------
+  UR-04    | The application should be accessible with proper      | Could
+           | color contrast, font sizes, and screen reader         |
+           | support.                                              |
+
+
+================================================================================
+7.8.2.8.7.  Availability Requirements
+================================================================================
+
+  Req-ID   | Requirement Description                              | Priority
+  ---------|------------------------------------------------------|----------
+  AR-01    | The application should target 99% uptime during      | Should
+           | normal operations.                                    |
+  ---------|------------------------------------------------------|----------
+  AR-02    | The application should handle third-party service     | Should
+           | outages (Mapbox, AI API) gracefully by displaying     |
+           | cached data or fallback messages.                     |
+  ---------|------------------------------------------------------|----------
+  AR-03    | The system could implement database backups at        | Could
+           | regular intervals to prevent data loss.               |
+
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================

@@ -19,9 +19,16 @@ export interface Notification {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
   duration?: number;
-  read?: boolean;
-  userEmail?: string;
-  createdAt?: string;
+}
+
+export interface BackendNotification {
+  id: string;
+  userEmail: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title?: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface UIState {
@@ -29,6 +36,7 @@ export interface UIState {
   sidebarOpen: boolean;
   isLoading: boolean;
   notifications: Notification[];
+  backendNotifications: BackendNotification[];
   mousePosition: { x: number; y: number };
   scrollPosition: number;
 }
@@ -49,9 +57,13 @@ type AppAction =
   | { type: 'TOGGLE_SIDEBAR' }
   | { type: 'SET_SIDEBAR'; payload: boolean }
   | { type: 'ADD_NOTIFICATION'; payload: Notification }
-  | { type: 'SET_NOTIFICATIONS'; payload: Notification[] }
-  | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'REMOVE_NOTIFICATION'; payload: string }
+  | { type: 'SET_BACKEND_NOTIFICATIONS'; payload: BackendNotification[] }
+  | { type: 'ADD_BACKEND_NOTIFICATION'; payload: BackendNotification }
+  | { type: 'MARK_BACKEND_NOTIFICATION_READ'; payload: string }
+  | { type: 'MARK_ALL_BACKEND_NOTIFICATIONS_READ' }
+  | { type: 'REMOVE_BACKEND_NOTIFICATION'; payload: string }
+  | { type: 'CLEAR_ALL_BACKEND_NOTIFICATIONS' }
   | { type: 'SET_MOUSE_POSITION'; payload: { x: number; y: number } }
   | { type: 'SET_SCROLL_POSITION'; payload: number }
   | { type: 'LOGOUT' };
@@ -66,6 +78,7 @@ const initialState: AppState = {
     sidebarOpen: false,
     isLoading: false,
     notifications: [],
+    backendNotifications: [],
     mousePosition: { x: 0, y: 0 },
     scrollPosition: 0
   }
@@ -98,30 +111,62 @@ function appReducer(state: AppState, action: AppAction): AppState {
           notifications: [...state.ui.notifications, action.payload]
         }
       };
-    case 'SET_NOTIFICATIONS':
-      return {
-        ...state,
-        ui: {
-          ...state.ui,
-          notifications: action.payload
-        }
-      };
-    case 'MARK_NOTIFICATION_READ':
-      return {
-        ...state,
-        ui: {
-          ...state.ui,
-          notifications: state.ui.notifications.map(n => 
-            n.id === action.payload ? { ...n, read: true } : n
-          )
-        }
-      };
     case 'REMOVE_NOTIFICATION':
       return {
         ...state,
         ui: {
           ...state.ui,
           notifications: state.ui.notifications.filter(n => n.id !== action.payload)
+        }
+      };
+    case 'SET_BACKEND_NOTIFICATIONS':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          backendNotifications: action.payload
+        }
+      };
+    case 'ADD_BACKEND_NOTIFICATION':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          backendNotifications: [action.payload, ...state.ui.backendNotifications]
+        }
+      };
+    case 'MARK_BACKEND_NOTIFICATION_READ':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          backendNotifications: state.ui.backendNotifications.map(n => 
+            n.id === action.payload ? { ...n, read: true } : n
+          )
+        }
+      };
+    case 'MARK_ALL_BACKEND_NOTIFICATIONS_READ':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          backendNotifications: state.ui.backendNotifications.map(n => ({ ...n, read: true }))
+        }
+      };
+    case 'REMOVE_BACKEND_NOTIFICATION':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          backendNotifications: state.ui.backendNotifications.filter(n => n.id !== action.payload)
+        }
+      };
+    case 'CLEAR_ALL_BACKEND_NOTIFICATIONS':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          backendNotifications: []
         }
       };
     case 'SET_MOUSE_POSITION':
@@ -152,6 +197,10 @@ interface AppContextType {
   logout: () => void;
   notify: (notification: Omit<Notification, 'id'>) => void;
   removeNotification: (id: string) => void;
+  markBackendNotificationRead: (id: string) => void;
+  markAllBackendNotificationsRead: () => void;
+  removeBackendNotification: (id: string) => void;
+  clearAllBackendNotifications: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -217,11 +266,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!state.isAuthenticated || !state.user) return;
 
-    // Fetch initial notifications
+    // Fetch initial backend notifications
     const fetchInitial = async () => {
       try {
         const data = await getNotifications();
-        dispatch({ type: 'SET_NOTIFICATIONS', payload: data as unknown as Notification[] });
+        dispatch({ type: 'SET_BACKEND_NOTIFICATIONS', payload: data as unknown as BackendNotification[] });
       } catch (err) {
         console.error('Failed to fetch notifications', err);
       }
@@ -247,12 +296,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       console.log('Connected to Notification WebSocket');
       // Subscribe to user-specific queue
       stompClient.subscribe(`/user/${state.user?.email}/queue/notifications`, (message) => {
-        const notification = JSON.parse(message.body) as Notification;
-        dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
+        const notification = JSON.parse(message.body) as BackendNotification;
+        dispatch({ type: 'ADD_BACKEND_NOTIFICATION', payload: notification });
         
         // Browser Notification if permitted
         if ('Notification' in window && window.Notification.permission === 'granted') {
-          new window.Notification('ExploreMate', { body: notification.message });
+          new window.Notification(notification.title || 'ExploreMate', { body: notification.message });
         }
       });
     };
@@ -294,15 +343,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const removeNotification = useCallback(async (id: string) => {
-    // Local first for snappy UI
+  const removeNotification = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_NOTIFICATION', payload: id });
-    try {
-      // Backend sync
-      await apiMarkAsRead(id);
-    } catch (err) {
-      console.error('Failed to mark as read', err);
-    }
+  }, []);
+
+  const markBackendNotificationRead = useCallback((id: string) => {
+    dispatch({ type: 'MARK_BACKEND_NOTIFICATION_READ', payload: id });
+  }, []);
+
+  const markAllBackendNotificationsRead = useCallback(() => {
+    dispatch({ type: 'MARK_ALL_BACKEND_NOTIFICATIONS_READ' });
+  }, []);
+
+  const removeBackendNotification = useCallback((id: string) => {
+    dispatch({ type: 'REMOVE_BACKEND_NOTIFICATION', payload: id });
+  }, []);
+
+  const clearAllBackendNotifications = useCallback(() => {
+    dispatch({ type: 'CLEAR_ALL_BACKEND_NOTIFICATIONS' });
   }, []);
 
   return (
@@ -312,7 +370,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       notify,
-      removeNotification
+      removeNotification,
+      markBackendNotificationRead,
+      markAllBackendNotificationsRead,
+      removeBackendNotification,
+      clearAllBackendNotifications
     }}>
       {children}
     </AppContext.Provider>
@@ -333,6 +395,8 @@ export const useUser = () => useApp().state.user;
 export const useIsAuthenticated = () => useApp().state.isAuthenticated;
 export const useTheme = () => useApp().state.ui.theme;
 export const useNotifications = () => useApp().state.ui.notifications;
+export const useBackendNotifications = () => useApp().state.ui.backendNotifications;
+export const useUnreadBackendNotificationsCount = () => useApp().state.ui.backendNotifications.filter(n => !n.read).length;
 export const useMousePosition = () => useApp().state.ui.mousePosition;
 export const useScrollPosition = () => useApp().state.ui.scrollPosition;
 
